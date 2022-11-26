@@ -6,31 +6,31 @@ import bs4
 import pandas
 
 def read_tbl(page):
-  url = "https://www.zhongbaodeng.com/channel/350b43d4af88460b93ccd46658cf631e.html"
-  params = {
-    "isChannel": "",
-    "isSelect": "",
-    "type": "",
-    "typeId": "",
-    "keyValue": "",
-    "currentPage": page,
-    "keyword": "",
-  }
-  rsp = requests.post(url=url, params=params)
-  soup = bs4.BeautifulSoup(rsp.text, "lxml")
-  tbl = soup.find('div', attrs={"class": "product_content_content product_content_content1"})
-  tbl = tbl.find_all("li")
-  out = []
-  for ele in tbl:
-    ele = ele.find_all("div")
-    out.append([
-      ele[0].text.strip(),
-      ele[1].text.strip(),
-      ele[2].text.strip(),
-      ele[3].text.strip(),
-      ele[4].text.strip()
-    ])
-  return out
+	url = "https://www.zhongbaodeng.com/channel/350b43d4af88460b93ccd46658cf631e.html"
+	params = {
+		"isChannel": "",
+		"isSelect": "",
+		"type": "",
+		"typeId": "",
+		"keyValue": "",
+		"currentPage": page,
+		"keyword": "",
+	}
+	rsp = requests.post(url=url, params=params)
+	soup = bs4.BeautifulSoup(rsp.text, "lxml")
+	tbl = soup.find('div', attrs={"class": "product_content_content product_content_content1"})
+	tbl = tbl.find_all("li")
+	out = []
+	for ele in tbl:
+		ele = ele.find_all("div")
+		out.append([
+			ele[0].text.strip(),
+			ele[1].text.strip(),
+			ele[2].text.strip(),
+			ele[3].text.strip(),
+			ele[4].text.strip()
+		])
+	return out
 
 out = []
 total_page = 77
@@ -45,6 +45,6 @@ tbl = pandas.concat(tbl, ignore_index=True)
 excel_path = "~/Downloads/组合类产品登记信息.xlsx"
 print(f"writing to excel: {excel_path}")
 with pandas.ExcelWriter(excel_path) as writer:
-  tbl.to_excel(writer, index=False)
+  	tbl.to_excel(writer, index=False)
 
 print("done")
