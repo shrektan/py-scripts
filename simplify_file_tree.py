@@ -31,4 +31,5 @@ for entry in os.scandir(target):
             os.removedirs(entry.path)
 
 print(f"{target=} cleaned.")
-subprocess.run(["open", target])
+# by adding the check=True, we can be sure that an error raised if it fails
+subprocess.run(["open", target], check=True)
