@@ -1,20 +1,4 @@
-import pathlib
-
-def simplify(tgt: str, rm_empty_folder: bool):
-    target = pathlib.Path(tgt)
-    for entry in target.iterdir():
-        if entry.is_dir():
-            for f in entry.iterdir():
-                if f.name == ".DS_Store":
-                    f.unlink()
-                    continue
-                fname = f.name
-                while (dest := target / fname).exists():
-                    fname = "0_" + fname
-                f.rename(dest)
-            if rm_empty_folder:
-                entry.rmdir()
-
+from simplify_file_tree import simplify
 
 def test_simiplify(tmp_path):
     (tmp_path / "file1").touch()
