@@ -17,19 +17,21 @@ if len(target) == 0 or os.path.exists(target) is False or \
     raise FileExistsError(msg)
 rm_empty_folder = input("Clean the empty folder? [y]/n\n") != "n"
 
-for entry in os.scandir(target):
-    if entry.is_dir():
-        for f in os.scandir(entry.path):
-            file_name = f.name
-            if file_name[0] == ".":
-                continue
-            if file_name == entry.name:
-                file_name = "0-" + file_name
-            dest = os.path.join(target, file_name)
-            shutil.move(f.path, dest)
-        if rm_empty_folder:
-            os.removedirs(entry.path)
+def simplify(target: str, rm_empty_folder: bool):
+    for entry in os.scandir(target):
+        if entry.is_dir():
+            for f in os.scandir(entry.path):
+                file_name = f.name
+                if file_name[0] == ".":
+                    continue
+                if file_name == entry.name:
+                    file_name = "0-" + file_name
+                dest = os.path.join(target, file_name)
+                shutil.move(f.path, dest)
+            if rm_empty_folder:
+                os.removedirs(entry.path)
 
+simplify(target, rm_empty_folder)
 print(f"{target=} cleaned.")
 # by adding the check=True, we can be sure that an error raised if it fails
 subprocess.run(["open", target], check=True)
