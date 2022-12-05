@@ -11,7 +11,7 @@ def test_simiplify(tmp_path):
     (tmp_path / "folder4").mkdir()
     (tmp_path / "folder4" / "file1").touch()
     simplify(str(tmp_path), True)
-    files = [f for f in tmp_path.iterdir()]
+    files = list(tmp_path.iterdir())
     assert len(files) == 6
     assert (tmp_path / "file1") in files
     assert (tmp_path / "file2") in files
