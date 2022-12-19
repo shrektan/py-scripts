@@ -6,6 +6,5 @@
     "tests"
   ],
   "python.testing.unittestEnabled": false,
-  "python.testing.pytestEnabled": true,
-  "ruff.path": ["/opt/homebrew/bin/ruff"]
+  "python.testing.pytestEnabled": true
 }
