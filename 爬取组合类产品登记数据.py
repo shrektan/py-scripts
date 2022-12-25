@@ -7,7 +7,6 @@ import requests
 import bs4
 import pandas
 
-
 def read_tbl(page: int):
     """Read the table content from ZhongBaoDeng website
 
@@ -44,25 +43,28 @@ def read_tbl(page: int):
             ele[3].text.strip(),
             ele[4].text.strip()
         ])
-    return out
+    cols = ["序号", "产品管理人", "产品登记编码", "产品全称", "登记时间"]
+    return pandas.DataFrame(out, columns=cols)
 
 
-out = []
-msg = "The total pages to be downloaded (check the website by yourself):\n"
-total_page = int(input(msg))
-print(f"total page is set to {total_page}")
-if total_page < 1:
-    raise ValueError(f"The {total_page=} must be positive integer!")
-for i in range(1, total_page):
-    print(f"fetching page {i}")
-    out.append(read_tbl(i))
-cols = ["序号", "产品管理人", "产品登记编码", "产品全称", "登记时间"]
-tbl = map(lambda x: pandas.DataFrame(x, columns=cols), out)
-tbl = list(tbl)
-tbl = pandas.concat(tbl, ignore_index=True)
+def main() -> None:
+    out = []
+    msg = "The total pages to be downloaded (check the website by yourself):\n"
+    total_page = int(input(msg))
+    print(f"total page is set to {total_page}")
+    if total_page < 1:
+        raise ValueError(f"The {total_page=} must be positive integer!")
+    for i in range(1, total_page):
+        print(f"fetching page {i}")
+        out.append(read_tbl(i))
+    tbl = pandas.concat(out, ignore_index=True)
 
-excel_path = "~/Downloads/组合类产品登记信息.xlsx"
-print(f"writing to excel: {excel_path}")
-tbl.to_excel(excel_path, index=False)
+    excel_path = "~/Downloads/组合类产品登记信息.xlsx"
+    print(f"writing to excel: {excel_path}")
+    tbl.to_excel(excel_path, index=False)
 
-print("done")
+    print("done")
+
+
+if __name__ == "__main__":
+    main()
