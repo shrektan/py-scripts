@@ -1,37 +1,9 @@
+import pathlib
 from PyPDF2 import PdfFileReader
 import pandas as pd
 pd.set_option('display.unicode.ambiguous_as_wide',True)
 pd.set_option('display.unicode.east_asian_width',True)
 
-garbageletter = '½ö¹©°²Áª×Ê²ú²Î¿¼'
-
-pdf_path = "/Users/shrektan/Library/CloudStorage/OneDrive-共享的库-onedrive/"\
-"安联资管文档/采购相关/中保登数据/样本/保险资产管理产品行业报告（2021年12月）-组合行情-开放式组合类资管产品清单.pdf"
-out_path = "~/Downloads/中保登数据-2021年12月.xlsx"
-
-def find_prod_type(x: str) -> str:
-    opts = ["固定收益类", "混合类", "权益类", "货币类"]
-    for opt in opts:
-        if x.count(opt) > 0:
-            return opt
-    return "N/A"
-
-out = []
-p = PdfFileReader(pdf_path)
-for i in range(p.getNumPages()):
-    text = p.getPage(i).extract_text().replace(garbageletter, "").strip().split("\n")
-    tbl_text = filter(lambda x: x.count(" ") == 6, text)
-    meta_text = filter(lambda x: x.count(" ") != 6, text)
-    cols = ["产品全称", "产品成立时间", "期末累计单位净值(元/份)",
-            "当月累计单位净值增长率", "年初以来累计单位净值增长率", "期末净资产(亿元)", "产品管理机构"]
-    df = pd.DataFrame(map(lambda x: x.split(" "), tbl_text), columns=cols)
-    df["产品类型"] = find_prod_type("".join(meta_text))
-    out.append(df)
-out2 = pd.concat(out, ignore_index=True)
-
-out2["产品成立时间"] = pd.to_datetime(out2["产品成立时间"], format="%Y%m%d")
-out2["期末累计单位净值(元/份)"] = pd.to_numeric(out2["期末累计单位净值(元/份)"])
-out2["期末净资产(亿元)"] = pd.to_numeric(out2["期末净资产(亿元)"])
 
 def rate2num(x :list[str]) -> list[float]:
     out = []
@@ -44,7 +16,47 @@ def rate2num(x :list[str]) -> list[float]:
             out.append(pd.to_numeric(x[i]))
     return out
 
-out2["当月累计单位净值增长率"] = rate2num(out2["当月累计单位净值增长率"])
-out2["年初以来累计单位净值增长率"] = rate2num(out2["年初以来累计单位净值增长率"])
 
-out2.to_excel(out_path)
+def find_prod_type(x: str) -> str:
+    opts = ["固定收益类", "混合类", "权益类", "货币类"]
+    for opt in opts:
+        if x.count(opt) > 0:
+            return opt
+    return "N/A"
+
+
+def read_tbl(pdf_path: pathlib.Path, out_path: pathlib.Path):
+    out = []
+    p = PdfFileReader(pdf_path)
+    garbage = '½ö¹©°²Áª×Ê²ú²Î¿¼'
+    for i in range(p.getNumPages()):
+        text = p.getPage(i).extract_text().replace(garbage, "").strip().split("\n")
+        tbl_text = filter(lambda x: x.count(" ") == 6, text)
+        meta_text = filter(lambda x: x.count(" ") != 6, text)
+        cols = ["产品全称", "产品成立时间", "期末累计单位净值(元/份)",
+                "当月累计单位净值增长率", "年初以来累计单位净值增长率", "期末净资产(亿元)", "产品管理机构"]
+        df = pd.DataFrame(map(lambda x: x.split(" "), tbl_text), columns=cols)
+        df["产品类型"] = find_prod_type("".join(meta_text))
+        out.append(df)
+    out2 = pd.concat(out, ignore_index=True)
+    out2["产品成立时间"] = pd.to_datetime(out2["产品成立时间"], format="%Y%m%d")
+    out2["期末累计单位净值(元/份)"] = pd.to_numeric(out2["期末累计单位净值(元/份)"])
+    out2["期末净资产(亿元)"] = pd.to_numeric(out2["期末净资产(亿元)"])
+    out2["当月累计单位净值增长率"] = rate2num(out2["当月累计单位净值增长率"])
+    out2["年初以来累计单位净值增长率"] = rate2num(out2["年初以来累计单位净值增长率"])
+    out2.to_excel(out_path)
+
+
+def main():
+    pdf_path = "/Users/shrektan/Library/CloudStorage/OneDrive-共享的库-onedrive/"\
+        "安联资管文档/监管和协会资料/组合类产品信息/保险资产管理产品行业报告（2022年10月）-组合行情-开放式组合类资管产品清单.pdf"
+    out_path = "~/Downloads/中保登数据-2022年10月.xlsx"
+    pdf_path = pathlib.Path(pdf_path)
+    out_path = pathlib.Path(out_path)
+    if not pdf_path.exists():
+        raise FileExistsError
+    read_tbl(pdf_path, out_path)
+
+
+if __name__ == "__main__":
+    main()

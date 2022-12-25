@@ -28,7 +28,8 @@ def simplify(tgt: str, rm_empty_folder: bool):
             if rm_empty_folder:
                 entry.rmdir()
 
-if __name__ == "__main__":
+
+def main():
     target = ""
     if len(sys.argv) >= 2:
         target = sys.argv[1].strip()
@@ -43,3 +44,7 @@ if __name__ == "__main__":
     print(f"{target=} cleaned.")
     # by adding the check=True, we can be sure that an error raised if it fails
     subprocess.run(["open", target], check=True)
+
+
+if __name__ == "__main__":
+    main()
