@@ -29,7 +29,7 @@ def simplify(tgt: str, rm_empty_folder: bool):
                 entry.rmdir()
 
 
-def main():
+def main() -> None:
     target = ""
     if len(sys.argv) >= 2:
         target = sys.argv[1].strip()

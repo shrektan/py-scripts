@@ -6,14 +6,14 @@ pd.set_option('display.unicode.east_asian_width',True)
 
 
 def rate2num(x :list[str]) -> list[float]:
-    out = []
-    for i in range(len(x)):
-        if x[i] == "-":
+    out :list[float] = []
+    for elem in x:
+        if elem == "-":
             out.append(pd.NA)
-        elif x[i].find("%") > -1:
-            out.append(pd.to_numeric(x[i].replace("%", "")) / 100.0)
+        elif elem.find("%") > -1:
+            out.append(pd.to_numeric(elem.replace("%", "")) / 100.0)
         else:
-            out.append(pd.to_numeric(x[i]))
+            out.append(pd.to_numeric(elem))
     return out
 
 
@@ -25,7 +25,7 @@ def find_prod_type(x: str) -> str:
     return "N/A"
 
 
-def read_tbl(pdf_path: pathlib.Path, out_path: pathlib.Path):
+def read_tbl(pdf_path: pathlib.Path) -> pd.DataFrame:
     out = []
     p = PdfFileReader(pdf_path)
     garbage = '½ö¹©°²Áª×Ê²ú²Î¿¼'
@@ -44,18 +44,17 @@ def read_tbl(pdf_path: pathlib.Path, out_path: pathlib.Path):
     out2["期末净资产(亿元)"] = pd.to_numeric(out2["期末净资产(亿元)"])
     out2["当月累计单位净值增长率"] = rate2num(out2["当月累计单位净值增长率"])
     out2["年初以来累计单位净值增长率"] = rate2num(out2["年初以来累计单位净值增长率"])
-    out2.to_excel(out_path)
+    return out2
 
 
-def main():
+def main() -> None:
     pdf_path = "/Users/shrektan/Library/CloudStorage/OneDrive-共享的库-onedrive/"\
         "安联资管文档/监管和协会资料/组合类产品信息/保险资产管理产品行业报告（2022年10月）-组合行情-开放式组合类资管产品清单.pdf"
     out_path = "~/Downloads/中保登数据-2022年10月.xlsx"
     pdf_path = pathlib.Path(pdf_path)
-    out_path = pathlib.Path(out_path)
     if not pdf_path.exists():
         raise FileExistsError
-    read_tbl(pdf_path, out_path)
+    read_tbl(pdf_path).to_excel(out_path)
 
 
 if __name__ == "__main__":
