@@ -1,3 +1,7 @@
+"""读取中保登组合类产品月度报告数据
+读取Excel里的组合产品数据并生成为Excel
+"""
+
 import pathlib
 from PyPDF2 import PdfFileReader
 import pandas as pd
