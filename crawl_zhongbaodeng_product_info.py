@@ -5,9 +5,9 @@ total_page和excel_path分别表示爬取的页面范围和生成的excel地址
 """
 import requests
 import bs4
-import pandas
+import pandas as pd
 
-def read_tbl(page: int):
+def read_tbl(page: int) -> pd.DataFrame | None:
     """Read the table content from ZhongBaoDeng website
 
     Args:
@@ -16,7 +16,7 @@ def read_tbl(page: int):
     Returns:
         list: each element contains a 5-length row data
     """
-    url = "https://www.zhongbaodeng.com/channel/"\
+    url:str = "https://www.zhongbaodeng.com/channel/"\
           "350b43d4af88460b93ccd46658cf631e.html"
     params = {
         "isChannel": "",
@@ -27,14 +27,17 @@ def read_tbl(page: int):
         "currentPage": page,
         "keyword": "",
     }
-    rsp = requests.post(url=url, params=params, timeout=10)
+    rsp: requests.Response = requests.post(url=url, params=params, timeout=10)
     soup = bs4.BeautifulSoup(rsp.text, "lxml")
     tbl = soup.find('div', attrs={
         "class": "product_content_content product_content_content1"
     })
-    tbl = tbl.find_all("li")
+    if isinstance(tbl, bs4.element.Tag):
+        lis = tbl.find_all("li")
+    else:
+        return None
     out = []
-    for ele in tbl:
+    for ele in lis:
         ele = ele.find_all("div")
         out.append([
             ele[0].text.strip(),
@@ -43,23 +46,25 @@ def read_tbl(page: int):
             ele[3].text.strip(),
             ele[4].text.strip()
         ])
-    cols = ["序号", "产品管理人", "产品登记编码", "产品全称", "登记时间"]
-    return pandas.DataFrame(out, columns=cols)
+    cols: list[str] = ["序号", "产品管理人", "产品登记编码", "产品全称", "登记时间"]
+    return pd.DataFrame(out, columns=cols)
 
 
 def main() -> None:
-    out = []
-    msg = "The total pages to be downloaded (check the website by yourself):\n"
-    total_page = int(input(msg))
+    out: list[pd.DataFrame] = []
+    msg: str = "The total pages to be downloaded (check the website by yourself):\n"
+    total_page: int = int(input(msg))
     print(f"total page is set to {total_page}")
     if total_page < 1:
         raise ValueError(f"The {total_page=} must be positive integer!")
     for i in range(1, total_page):
         print(f"fetching page {i}")
-        out.append(read_tbl(i))
-    tbl = pandas.concat(out, ignore_index=True)
+        r = read_tbl(i)
+        if r is not None:
+            out.append(r)
+    tbl: pd.DataFrame = pd.concat(out, ignore_index=True)
 
-    excel_path = "~/Downloads/组合类产品登记信息.xlsx"
+    excel_path: str = "~/Downloads/组合类产品登记信息.xlsx"
     print(f"writing to excel: {excel_path}")
     tbl.to_excel(excel_path, index=False)
 
