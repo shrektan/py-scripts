@@ -1,7 +1,6 @@
 """一个无敌简单的web服务器
 """
 import socket
-import os
 
 WEBROOT = "./webroot"
 
