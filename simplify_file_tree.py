@@ -7,6 +7,7 @@ import sys
 import pathlib
 import subprocess
 
+
 def simplify(tgt: str, rm_empty_folder: bool):
     """Simplify the file tree
 

@@ -7,6 +7,7 @@ import requests
 import bs4
 import pandas as pd
 
+
 def read_tbl(page: int) -> pd.DataFrame | None:
     """Read the table content from ZhongBaoDeng website
 
@@ -16,8 +17,8 @@ def read_tbl(page: int) -> pd.DataFrame | None:
     Returns:
         list: each element contains a 5-length row data
     """
-    url:str = "https://www.zhongbaodeng.com/channel/"\
-          "350b43d4af88460b93ccd46658cf631e.html"
+    url: str = "https://www.zhongbaodeng.com/channel/"\
+        "350b43d4af88460b93ccd46658cf631e.html"
     params = {
         "isChannel": "",
         "isSelect": "",

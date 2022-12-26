@@ -4,6 +4,7 @@ import socket
 
 WEBROOT = "./webroot"
 
+
 def handle_client(c: socket.socket, addr: str):
     print(f"{addr} connected")
     with c:
@@ -19,6 +20,7 @@ def handle_client(c: socket.socket, addr: str):
         except FileNotFoundError:
             response = b"HTTP/1.0 404 NOT FOUND\r\n\r\nFile not found!"
         c.sendall(response)
+
 
 # os.chdir(os.path.dirname(os.path.abspath(__file__)))
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:

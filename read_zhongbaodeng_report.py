@@ -5,14 +5,14 @@
 import pathlib
 from PyPDF2 import PdfFileReader
 import pandas as pd
-pd.set_option('display.unicode.ambiguous_as_wide',True)
-pd.set_option('display.unicode.east_asian_width',True)
+pd.set_option('display.unicode.ambiguous_as_wide', True)
+pd.set_option('display.unicode.east_asian_width', True)
 
 
-def rate2num(x :pd.Series) -> list | pd.Series:
+def rate2num(x: pd.Series) -> list | pd.Series:
     if not pd.api.types.is_string_dtype(x):
         return x
-    out :list = []
+    out: list = []
     for elem in x:
         if pd.isna(elem) or elem == "-":
             out.append(pd.NA)
@@ -55,7 +55,8 @@ def read_tbl(pdf_path: pathlib.Path) -> pd.DataFrame:
     p: PdfFileReader = PdfFileReader(pdf_path)
     garbage: str = '½ö¹©°²Áª×Ê²ú²Î¿¼'
     for i in range(p.getNumPages()):
-        txt = p.getPage(i).extract_text().replace(garbage, "").strip().split("\n")
+        txt = p.getPage(i).extract_text().replace(
+            garbage, "").strip().split("\n")
         normal_df = conv_normal(txt)
         mmp_df = conv_mmp(txt)
         df = pd.concat([normal_df, mmp_df])
@@ -73,7 +74,7 @@ def read_tbl(pdf_path: pathlib.Path) -> pd.DataFrame:
 def main() -> None:
     pdf_path: str = "/Users/shrektan/Library/CloudStorage/OneDrive-共享的库-onedrive/"\
         "安联资管文档/监管和协会资料/组合类产品信息/保险资产管理产品行业报告（2022年10月）-组合行情-开放式组合类资管产品清单.pdf"
-    out_path:str = "~/Downloads/中保登数据-2022年10月v2.xlsx"
+    out_path: str = "~/Downloads/中保登数据-2022年10月v2.xlsx"
     path: pathlib.Path = pathlib.Path(pdf_path)
     if not path.exists():
         raise FileExistsError(f"`{pdf_path}` doesn't exist.")

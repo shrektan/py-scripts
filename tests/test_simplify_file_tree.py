@@ -1,5 +1,6 @@
 from simplify_file_tree import simplify
 
+
 def test_simiplify(tmp_path):
     (tmp_path / "file1").touch()
     (tmp_path / "folder1").mkdir()
