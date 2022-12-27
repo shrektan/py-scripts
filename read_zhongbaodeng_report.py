@@ -106,13 +106,18 @@ def read_tbl(pdf_path: pathlib.Path) -> pd.DataFrame:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.DEBUG, force=True)
+    logging.basicConfig(level=logging.INFO, force=True)
     pd.set_option('display.unicode.ambiguous_as_wide', True)
     pd.set_option('display.unicode.east_asian_width', True)
-    pdf_path: str = "/Users/shrektan/Library/CloudStorage/OneDrive-共享的库-onedrive/"\
-        "安联资管文档/监管和协会资料/组合类产品信息/保险资产管理产品行业报告（2022年11月）-组合行情-开放式组合类资管产品清单.pdf"
-    out_path: str = "~/Downloads/中保登数据-2022年11月.xlsx"
+    ym = (2021, 12)
+    pdf_path: str = (
+        "/Users/shrektan/Library/CloudStorage/OneDrive-共享的库-onedrive/"
+        "安联资管文档/监管和协会资料/组合类产品信息/保险资产管理产品行业报告"
+        f"（{ym[0]:>04}年{ym[1]:>02}月）-组合行情-开放式组合类资管产品清单.pdf"
+    )
+    out_path: str = f"~/Downloads/中保登数据-{ym[0]:>04}年{ym[1]:>02}月.xlsx"
     path: pathlib.Path = pathlib.Path(pdf_path)
+    logging.info(f"The input PDF file is `{path.name}`")
     if not path.exists():
         raise FileExistsError(f"`{pdf_path}` doesn't exist.")
     read_tbl(path).to_excel(out_path)
