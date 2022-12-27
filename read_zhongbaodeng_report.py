@@ -8,10 +8,6 @@ import pandas as pd
 import logging
 import re
 
-logging.basicConfig(level=logging.DEBUG, force=True)
-pd.set_option('display.unicode.ambiguous_as_wide', True)
-pd.set_option('display.unicode.east_asian_width', True)
-
 
 def rate2num(x: pd.Series) -> list | pd.Series:
     if not pd.api.types.is_string_dtype(x):
@@ -110,6 +106,9 @@ def read_tbl(pdf_path: pathlib.Path) -> pd.DataFrame:
 
 
 def main() -> None:
+    logging.basicConfig(level=logging.DEBUG, force=True)
+    pd.set_option('display.unicode.ambiguous_as_wide', True)
+    pd.set_option('display.unicode.east_asian_width', True)
     pdf_path: str = "/Users/shrektan/Library/CloudStorage/OneDrive-共享的库-onedrive/"\
         "安联资管文档/监管和协会资料/组合类产品信息/保险资产管理产品行业报告（2022年11月）-组合行情-开放式组合类资管产品清单.pdf"
     out_path: str = "~/Downloads/中保登数据-2022年11月.xlsx"
