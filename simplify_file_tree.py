@@ -13,7 +13,7 @@ def simplify(tgt: str, rm_empty_folder: bool):
 
     Args:
         tgt (str): the directory to be simplified
-        rm_empty_folder (bool): wheter the empty folder to be removed or not
+        rm_empty_folder (bool): whether the empty folder to be removed or not
     """
     target = pathlib.Path(tgt)
     for entry in target.iterdir():
