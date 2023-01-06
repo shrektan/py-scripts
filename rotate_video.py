@@ -14,9 +14,9 @@ def rotate(files: list[pathlib.Path], out_folder: pathlib.Path,
         files (list[pathlib.Path]): The video files to be rotated.
         out_folder (pathlib.Path): Must be an empty folder.
         It will be created if not exists yet.
+        speed (str): Usually be one of ultrafast and fast.
         transpose (int): 1 is 90 clock-wise; 2 is 90 counter clock-wise.
         See more in https://ffmpeg.org/ffmpeg-filters.html#toc-transpose-1
-        speed (str): Usually be one of ultrafast and fast.
 
     Raises:
         FileExistsError: May throw when `out_folder` is not empty or can't
@@ -58,7 +58,7 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-t', '--transpose', type=int, default=2,
-        help="1 is 90 clock-wise; 2 is 90 counter clock-wise. "
+        help="1 is 90 clock-wise; 2 (default) is 90 counter clock-wise. "
         "See more in https://ffmpeg.org/ffmpeg-filters.html#toc-transpose-1")
     parser.add_argument(
         '-s', '--speed', type=str, default="ultrafast",
