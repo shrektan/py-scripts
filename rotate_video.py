@@ -37,8 +37,11 @@ def rotate(files: list[pathlib.Path], out_folder: pathlib.Path,
     for (i, file) in enumerate(files):
         print(f"Rotating {i+1} of {n}...")
         out_file = out_folder / file.name
-        cmd: list[str] = ["ffmpeg", "-i", str(file), "-c:v", "libx264",
-                          "-preset", f"{speed}", "-vf", f"transpose={transpose}",
+        cmd: list[str] = ["ffmpeg", "-i", str(file),
+                          "-loglevel", "fatal", "-nostats",  # to be less verbose
+                          "-c:v", "libx264",
+                          "-preset", f"{speed}",
+                          "-vf", f"transpose={transpose}",
                           str(out_file)]
         subprocess.run(cmd, check=True)
     print(f"All {n} files are done.")
