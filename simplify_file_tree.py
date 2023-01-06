@@ -3,7 +3,7 @@
 Quickly flat the file structure by removing the first level directories
 """
 
-import sys
+import argparse
 import pathlib
 import subprocess
 
@@ -31,20 +31,25 @@ def simplify(tgt: str, rm_empty_folder: bool):
 
 
 def main() -> None:
-    target = ""
-    if len(sys.argv) >= 2:
-        target = sys.argv[1].strip()
-    if len(target) == 0:
-        target = input("Please enter the target folder:\n").strip()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-k', '--keepsubfolder', action='store_true', default=False,
+        help="Keep the empty subfolder")
+    parser.add_argument(
+        '-o', '--open', action='store_true', default=False,
+        help="Open the folder when finished")
+    parser.add_argument(
+        'target', help="The folder to be simplified")
+    options = parser.parse_args()
+    target = options.target
     if len(target) == 0 or pathlib.Path(target).is_dir() is False:
         msg = f"You must provide a valid folder (current input is '{target}')"
         raise FileExistsError(msg)
-    rm_empty_folder = input("Clean the empty folder? [y]/n\n") != "n"
-
-    simplify(target, rm_empty_folder)
+    simplify(target, not options.keepsubfolder)
     print(f"{target=} cleaned.")
-    # by adding the check=True, we can be sure that an error raised if it fails
-    subprocess.run(["open", target], check=True)
+    if options.open:
+        # by adding the check=True, we can be sure that an error raised if it fails
+        subprocess.run(["open", target], check=True)
 
 
 if __name__ == "__main__":
