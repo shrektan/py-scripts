@@ -51,7 +51,9 @@ def get_files(x: str) -> list[pathlib.Path]:
 
     def isfile_notdot(f: pathlib.Path) -> bool:
         return f.is_file() and f.name[0] != "."
-    return list(filter(isfile_notdot, folder.iterdir()))
+    out = list(filter(isfile_notdot, folder.iterdir()))
+    out.sort()
+    return out
 
 
 def main() -> None:
