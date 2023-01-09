@@ -15,18 +15,20 @@ class Nav:
     nav_acc: float
 
 
-def find_nav(indexes: list[str], values: list[float],
+def find_nav(indexes: list[str], values: list[str],
              nms: tuple[str, str]) -> tuple[float, float]:
     nav = None
     nav_acc = None
     for (index, value) in zip(indexes, values):
-        if index == nms[0]:
+        if re.search(nms[0], index) is not None:
             nav = float(value)
-        if index == nms[1]:
+        if re.search(nms[1], index) is not None:
             nav_acc = float(value)
         if nav is not None and nav_acc is not None:
             return (nav, nav_acc)
-    raise LookupError(f"Can't find {nms} in the first column")
+    nms_cand = list(filter(lambda x: re.search("净值", x) is not None, indexes))
+    raise LookupError(
+        f"Can't find {nms} in the first column, possible names {nms_cand}")
 
 
 def parse_date(x: str) -> Optional[date]:
@@ -37,11 +39,11 @@ def parse_date(x: str) -> Optional[date]:
         return None
 
 
-def read_nav(excel: pathlib.Path, date_rgs: list[tuple[int, int]],
-             nav_nms: tuple[str, str], sheet: str | int = 1) -> Nav:
+def read_nav(excel: pathlib.Path, date_rgs: tuple[int, int],
+             nav_nms: tuple[str, str], sheet: str | int = 0) -> Nav:
     content: pd.DataFrame = pd.read_excel(excel, sheet_name=sheet)
     ref_date = None
-    for date_rg in date_rgs:
+    for date_rg in range(date_rgs[0]):
         cell = str(content.iloc[date_rg])
         logging.debug(f"the date range content is: {cell}")
         ref_date = parse_date(cell)
