@@ -32,15 +32,36 @@ def find_nav(indexes: list[str], values: list[str],
 
 
 def parse_date(x: str) -> Optional[date]:
-    match = re.findall(r"\d{4}-\d{2}-\d{2}", x)
+    match = re.search(r"(\d{4})[-年](\d{2})[-月](\d{2})日?", x)
     if match:
-        return datetime.strptime(match[0], "%Y-%m-%d").date()
+        datestr = "-".join(match.groups())
+        return datetime.strptime(datestr, "%Y-%m-%d").date()
     else:
         return None
 
 
 def read_nav(excel: pathlib.Path, date_rgs: tuple[int, int],
              nav_nms: tuple[str, str], sheet: str | int = 0) -> Nav:
+    """Read Nav data from Excel (估值表)
+
+    Args:
+        excel (pathlib.Path): Must be an existing excel
+        date_rgs (tuple[int, int]): The range to search for ref_date of navs.
+        Program will search such `0:date_rgs[0], date_rgs[1]` area and return
+        the first valid date. It tries to find the date by searching the pattern
+        of `%Y-%m-%d`.
+        nav_nms (tuple[str, str]): The row names that marked the nav and accumulative
+        nav.
+        sheet (str | int, optional): The sheet to search for. Defaults to 0.
+
+    Raises:
+        LookupError: It raise exception with searched area or potential row names, when
+        any of the values can't be found.
+
+    Returns:
+        Nav: contains the reference date, the unit nav, and the accumulative nav
+    """
+    logging.debug(f"Parsing `{excel}...`")
     content: pd.DataFrame = pd.read_excel(excel, sheet_name=sheet)
     ref_date = None
     for date_rg in range(date_rgs[0]):
@@ -51,8 +72,8 @@ def read_nav(excel: pathlib.Path, date_rgs: tuple[int, int],
             break
     if ref_date is None:
         raise LookupError(f"Fail to find ref_date in {date_rgs} cells")
-    indexes = list(content.iloc[:, 0])
-    values = list(content.iloc[:, 1])
+    indexes = list(content.iloc[:, 0].astype(str))
+    values = list(content.iloc[:, 1].astype(str))
     navs = find_nav(indexes, values, nav_nms)
     return Nav(ref_date, navs[0], navs[1])
 
@@ -64,27 +85,71 @@ def to_path(x: str) -> pathlib.Path:
     return out
 
 
+def find_all_excels(x: str) -> list[pathlib.Path]:
+    dir = pathlib.Path(x).expanduser()
+    if not dir.exists() or not dir.is_dir():
+        raise FileNotFoundError(f"{x} is not a valid directory")
+    out = []
+    for f in dir.iterdir():
+        if f.is_file() and f.suffix in [".xlsx", ".xls"]:
+            out.append(f)
+    return out
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        'excel', type=str, help="The excel to be read from")
+        'fromdir', type=str, help="The directory that stores the nav excels (估值表)")
     parser.add_argument(
-        'date_rgs', type=str,
-        help="the possible date positions, must be ")
+        'toexcel', type=str, help="The excel file that stores the parsed result")
     parser.add_argument(
-        'nav_nms', type=str,
-        help="the nav field names, require 2 names, must be a valid python expression")
+        '-date_rgs', type=str, default="(10,0)",
+        help="The possible date positions, must be in the form of (int, int), "
+        "which means the program tries to find the reference date "
+        "among the range `0:date_rgs[0], date_rgs[1]` cells")
+    parser.add_argument(
+        '-nav_nms', type=str, default="('(今日|基金)单位净值', '累计单位净值')",
+        help="The nav field names, require 2 names, must be in the for of (str, str), "
+        "which represents the unit nav and accumulative nav row names, respectively")
     parser.add_argument(
         '-s', "--sheet", type=int, help="The sheet name of the nav table", default=0)
     parser.add_argument(
+        '-n', type=int,
+        help="Only parse the first n Excels (Zero means all)", default=0)
+    parser.add_argument(
+        "--overwrite", help="display the info message",
+        action="store_true", default=False)
+    parser.add_argument(
+        '-v', "--verbose", help="display the info message",
+        action="store_true", default=False)
+    parser.add_argument(
         '-d', "--debug", help="display the debug message",
         action="store_true", default=False)
+
     opt = parser.parse_args()
+    toexcel = pathlib.Path(opt.toexcel).expanduser()
+    if toexcel.exists() and opt.overwrite is False:
+        raise FileExistsError(f"{toexcel} already exists")
+
     if opt.debug:
         logging.basicConfig(level=logging.DEBUG)
-    print(read_nav(
-        to_path(opt.excel), eval(opt.date_rgs), eval(opt.nav_nms), opt.sheet
-    ))
+    elif opt.verbose:
+        logging.basicConfig(level=logging.INFO)
+
+    excels = find_all_excels(opt.fromdir)
+    if opt.n > 0:
+        excels = excels[:opt.n]
+    logging.debug(f"find excels: {list(map(lambda x: x.name, excels))}")
+    out = []
+    for (i, excel) in enumerate(excels):
+        logging.info(f"Parsing {i+1} of {len(excels)}, {excel.name}...")
+        out.append(read_nav(
+            excel, date_rgs=eval(opt.date_rgs), nav_nms=eval(opt.nav_nms),
+            sheet=opt.sheet
+        ))
+    cols = ["净值日期", "单位净值", "累计单位净值"]
+    df = pd.DataFrame(out, columns=cols)
+    df.to_excel(opt.toexcel)
 
 
 if __name__ == "__main__":
