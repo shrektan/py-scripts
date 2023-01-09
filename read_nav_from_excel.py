@@ -1,7 +1,18 @@
+"""Read Nav from Excels (估值表)
+读取国内常见估值表的估值日期、单位净值和累计单位净值三则信息。
+需要将估值表Excel放置在一个文件夹中，程序会遍历文件夹中所有的Excel表。
+要求Excel表的格式大体一致。其解析原理为：
+
+净值日期：读取特定列的前n行，会自动根据%Y-%m-%d或%Y年%m月%d日信息去解析，
+返回第一个成功解析的日期。
+单位净值和累计单位净值，根据第一列的字符信息，找到第二列的净值。
+
+最后会输出到一张Excel表中。
+"""
 import pandas as pd
 import pathlib
 from datetime import date, datetime
-from dataclasses import dataclass
+from dataclasses import dataclass, astuple
 import re
 import argparse
 from typing import Optional
@@ -93,6 +104,7 @@ def find_all_excels(x: str) -> list[pathlib.Path]:
     for f in dir.iterdir():
         if f.is_file() and f.suffix in [".xlsx", ".xls"]:
             out.append(f)
+    out.sort()
     return out
 
 
@@ -115,9 +127,9 @@ def main() -> None:
         '-s', "--sheet", type=int, help="The sheet name of the nav table", default=0)
     parser.add_argument(
         '-n', type=int,
-        help="Only parse the first n Excels (Zero means all)", default=0)
+        help="only parse the first n Excels (Zero means all)", default=0)
     parser.add_argument(
-        "--overwrite", help="display the info message",
+        "--overwrite", help="overwrite the `toexcel` if exists",
         action="store_true", default=False)
     parser.add_argument(
         '-v', "--verbose", help="display the info message",
@@ -143,12 +155,16 @@ def main() -> None:
     out = []
     for (i, excel) in enumerate(excels):
         logging.info(f"Parsing {i+1} of {len(excels)}, {excel.name}...")
-        out.append(read_nav(
+        nav = read_nav(
             excel, date_rgs=eval(opt.date_rgs), nav_nms=eval(opt.nav_nms),
             sheet=opt.sheet
-        ))
+        )
+        logging.debug(f"nav is {nav}")
+        out.append(astuple(nav))
     cols = ["净值日期", "单位净值", "累计单位净值"]
+
     df = pd.DataFrame(out, columns=cols)
+    df = df.sort_values("净值日期")
     df.to_excel(opt.toexcel)
 
 
