@@ -134,23 +134,23 @@ def read_navs(excels: list[pathlib.Path], date_rgs: tuple[int, int],
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        'fromdir', type=str, help="The directory that stores the nav excels (估值表)")
+        'fromdir', type=str, help="the directory that stores the nav excels (估值表)")
     parser.add_argument(
-        'toexcel', type=str, help="The excel file that stores the parsed result")
+        'toexcel', type=str, help="the excel file that stores the parsed result")
     parser.add_argument(
         '-date_rgs', type=str, default="(10,0)",
-        help="The possible date positions, must be in the form of (int, int), "
+        help="the possible date positions, must be in the form of (int, int), "
         "which means the program tries to find the reference date "
         "among the range `0:date_rgs[0], date_rgs[1]` cells")
     parser.add_argument(
         '-nav_nms', type=str, default="('(今日|基金)单位净值', '累计单位净值')",
-        help="The nav field names, require 2 names, must be in the for of (str, str), "
+        help="the nav field names, require 2 names, must be in the for of (str, str), "
         "which represents the unit nav and accumulative nav row names, respectively")
     parser.add_argument(
-        '-s', "--sheet", type=int, help="The sheet name of the nav table", default=0)
+        '-s', "--sheet", type=int, help="the sheet name of the nav table", default=0)
     parser.add_argument(
         '-n', type=int,
-        help="only parse the first n Excels (Zero means all)", default=0)
+        help="only parse the first n Excels (default 0, means all)", default=0)
     parser.add_argument(
         "--overwrite", help="overwrite the `toexcel` if exists",
         action="store_true", default=False)
