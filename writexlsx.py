@@ -1,5 +1,4 @@
 """## Write Dataframe to Excel(xlsx) with customized styles
-
 Similar to the `to_excel()` method of Pandas's Dataframe.
 However, it will set a wider column width for `date` and `datetime`
 objects. The font, the background color and the cell grid line will
@@ -26,8 +25,10 @@ Plan to submit to `pip` when matured
 - `xlsxwriter`: https://xlsxwriter.readthedocs.io
 """
 import xlsxwriter as xw
+
 import pandas as pd
 from pathlib import Path
+import subprocess
 
 
 def check_elem_df(x: dict) -> None:
@@ -56,7 +57,8 @@ def make_dict(df: pd.DataFrame | dict[str, pd.DataFrame] |
 
 def write(df: pd.DataFrame | dict[str, pd.DataFrame] |
           tuple[pd.DataFrame] | list[pd.DataFrame],
-          path: str, /, overwrite=False) -> Path:
+          path: str, /,
+          overwrite: bool = False, open: bool = False) -> Path:
     filepath = Path(path).expanduser()
     if filepath.suffix != ".xlsx":
         raise NameError(f"The path must end with .xlsx ({path})")
@@ -72,4 +74,6 @@ def write(df: pd.DataFrame | dict[str, pd.DataFrame] |
         for (nm, v) in x.items():
             v.to_excel(writer, nm)
 
+    if open:
+        subprocess.run(["open", str(filepath)])
     return filepath
