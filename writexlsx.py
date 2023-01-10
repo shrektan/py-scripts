@@ -25,13 +25,16 @@ Plan to submit to `pip` when matured
 - `xlsxwriter`: https://xlsxwriter.readthedocs.io
 """
 import xlsxwriter as xw
+from xlsxwriter.workbook import Worksheet
 import pandas as pd
 from pathlib import Path
 import subprocess
-from typing import Callable, Optional
+from typing import Callable, Optional, Any
 
 Dict_DF = dict[str, pd.DataFrame]
-Styler = Callable[[pd.DataFrame, xw.workbook.Worksheet], None]
+Format = Optional[dict[str, Any]]
+Wb_Format = xw.workbook.Format
+Styler = Callable[[pd.DataFrame, Worksheet, Wb_Format], None]
 
 
 def check_elem_df(x: dict) -> None:
@@ -58,41 +61,52 @@ def make_dict(df: pd.DataFrame | Dict_DF |
     return x
 
 
-def set_date_col_width(df: pd.DataFrame, sheet: xw.workbook.Worksheet) -> None:
+def set_date_col_width(df: pd.DataFrame, sheet: Worksheet, wbfmt: Wb_Format) -> None:
     ...
 
 
-def set_header(df: pd.DataFrame, sheet: xw.workbook.Worksheet) -> None:
+def set_header(df: pd.DataFrame, sheet: Worksheet, wbfmt: Wb_Format) -> None:
+    for col_num, value in enumerate(df.columns.values):
+        sheet.write(0, col_num + 1, value, wbfmt)
+
+
+def set_grid(df: pd.DataFrame, sheet: Worksheet, wbfmt: Wb_Format) -> None:
     ...
 
 
-def set_grid(df: pd.DataFrame, sheet: xw.workbook.Worksheet) -> None:
+def gen_styler_comma(cols: list[str]) -> tuple[Styler, Format]:
     ...
 
 
-def gen_styler_comma(cols: list[str]) -> Styler:
+def gen_styler_percent(cols: list[str]) -> tuple[Styler, Format]:
     ...
 
 
-def gen_styler_percent(cols: list[str]) -> Styler:
-    ...
+default_formats: dict[str, Format] = {
+    "header": {
+        'bold': True,
+        'text_wrap': True,
+        'valign': 'top',
+        'fg_color': '#D7E4BC',
+        'border': 1
+    }
+}
 
 
-default_stylers: list[Styler] = [
-    set_date_col_width,
-    set_header,
-    set_grid,
+default_stylers: list[tuple[Styler, Format]] = [
+    (set_date_col_width, None),
+    (set_header, default_formats['header']),
+    (set_grid, None),
 ]
 
 
-def apply(x: Dict_DF, wb: xw.Workbook, styler: Styler) -> None:
-    if styler is NotImplemented:
-        return None
+def apply(x: Dict_DF, wb: xw.Workbook, styler: Styler, fmt: Format) -> None:
+    wbfmt = wb.add_format(fmt)
     for (df, ws) in zip(x.values(), wb.worksheets()):
-        styler(df, ws)
+        styler(df, ws, wbfmt)
 
 
-def make_stylers(comma, percent) -> list[Styler]:
+def make_stylers(comma, percent) -> list[tuple[Styler, Format]]:
     stylers = default_stylers.copy()
     if comma is not None:
         stylers.append(gen_styler_comma(comma))
@@ -122,8 +136,8 @@ def write(df: pd.DataFrame | Dict_DF |
         # I think it's a bug of pandas, as it doesn't specify "xlsxwriter" as the
         # legal literal so we ignore the type error here
         book: xw.Workbook = writer.book  # type: ignore
-        for style in stylers:
-            apply(x, book, style)
+        for v in stylers:
+            apply(x, book, v[0], v[1])
 
     if open:
         subprocess.run(["open", str(filepath)])
