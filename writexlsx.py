@@ -46,7 +46,7 @@ def make_dict(df: pd.DataFrame | dict[str, pd.DataFrame] |
     elif isinstance(df, tuple) or isinstance(df, list):
         x = {}
         for (i, v) in enumerate(df):
-            x["Sheet" + str(i)] = v
+            x["Sheet" + str(i + 1)] = v
     else:
         raise TypeError("the type of df must be one of DataFrame, dict, tuple or list. "
                         f"now it's {type(df)}")
