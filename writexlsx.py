@@ -59,23 +59,23 @@ def make_dict(df: pd.DataFrame | Dict_DF |
 
 
 def set_date_col_width(df: pd.DataFrame, sheet: xw.workbook.Worksheet) -> None:
-    raise NotImplementedError
+    ...
 
 
 def set_header(df: pd.DataFrame, sheet: xw.workbook.Worksheet) -> None:
-    raise NotImplementedError
+    ...
 
 
 def set_grid(df: pd.DataFrame, sheet: xw.workbook.Worksheet) -> None:
-    raise NotImplementedError
+    ...
 
 
 def gen_styler_comma(cols: list[str]) -> Styler:
-    raise NotImplementedError
+    ...
 
 
 def gen_styler_percent(cols: list[str]) -> Styler:
-    raise NotImplementedError
+    ...
 
 
 default_stylers: list[Styler] = [
@@ -86,6 +86,8 @@ default_stylers: list[Styler] = [
 
 
 def apply(x: Dict_DF, wb: xw.Workbook, styler: Styler) -> None:
+    if styler is NotImplemented:
+        return None
     for (df, ws) in zip(x.values(), wb.worksheets()):
         styler(df, ws)
 
