@@ -1,13 +1,22 @@
-"""Read Nav from Excels (估值表)
-读取国内常见估值表的估值日期、单位净值和累计单位净值三则信息。
+"""## Read Nav from Excels (估值表)
+读取国内常见估值表的*估值日期、单位净值和累计单位净值*三则信息。
 需要将估值表Excel放置在一个文件夹中，程序会遍历文件夹中所有的Excel表。
-要求Excel表的格式大体一致。其解析原理为：
+要求Excel表的格式大体一致。
 
-净值日期：读取特定列的前n行，会自动根据%Y-%m-%d或%Y年%m月%d日信息去解析，
+### 解析原理
+
+- `净值日期`：读取特定列的前n行，会自动根据`%Y-%m-%d`或%Y年%m月%d日信息去解析，
 返回第一个成功解析的日期。
-单位净值和累计单位净值，根据第一列的字符信息，找到第二列的净值。
+- `单位净值`和`累计单位净值`，根据第一列的字符信息，找到第二列的净值。
 
-最后会输出到一张Excel表中。
+结果会输出到Excel表中。
+
+### 代码示例
+
+```bash
+python read_nav_from_excel.py ~/Downloads/excels ~/Downloads/nav-data.xlsx --overwrite
+```
+
 """
 import pandas as pd
 import pathlib
@@ -108,6 +117,20 @@ def find_all_excels(x: str) -> list[pathlib.Path]:
     return out
 
 
+def read_navs(excels: list[pathlib.Path], date_rgs: tuple[int, int],
+              nav_nms: tuple[str, str], sheet: str | int = 0) -> pd.DataFrame:
+    out = []
+    for (i, excel) in enumerate(excels):
+        logging.info(f"Parsing {i+1} of {len(excels)}, {excel.name}...")
+        nav = read_nav(excel, date_rgs=date_rgs, nav_nms=nav_nms, sheet=sheet)
+        logging.debug(f"nav is {nav}")
+        out.append(astuple(nav))
+    cols = ["净值日期", "单位净值", "累计单位净值"]
+    df = pd.DataFrame(out, columns=cols)
+    df = df.sort_values("净值日期")
+    return df
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -152,20 +175,10 @@ def main() -> None:
     if opt.n > 0:
         excels = excels[:opt.n]
     logging.debug(f"find excels: {list(map(lambda x: x.name, excels))}")
-    out = []
-    for (i, excel) in enumerate(excels):
-        logging.info(f"Parsing {i+1} of {len(excels)}, {excel.name}...")
-        nav = read_nav(
-            excel, date_rgs=eval(opt.date_rgs), nav_nms=eval(opt.nav_nms),
-            sheet=opt.sheet
-        )
-        logging.debug(f"nav is {nav}")
-        out.append(astuple(nav))
-    cols = ["净值日期", "单位净值", "累计单位净值"]
 
-    df = pd.DataFrame(out, columns=cols)
-    df = df.sort_values("净值日期")
-    df.to_excel(opt.toexcel)
+    out = read_navs(excels, date_rgs=eval(opt.date_rgs),
+                    nav_nms=eval(opt.nav_nms), sheet=opt.sheet)
+    out.to_excel(opt.toexcel)
 
 
 if __name__ == "__main__":
