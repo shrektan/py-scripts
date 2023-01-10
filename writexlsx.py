@@ -17,9 +17,12 @@ be set accordingly.
 1. Support to set the Excel's table style
 1. Support to write to tmp file with proper name then open in MS Excel, which is
    quite convinient when exploring data
+1. Set proper column width for date, datetime, long numbers, etc.
 
-## Plan
-Plan to submit to `pip` when matured
+## TODO
+- We should not use `DataFrame.to_xlsx()`. It makes everything complicated.
+  We should just write the cell by ourselves.
+- Plan to submit to `pip` when matured
 
 ## Dependencies:
 - `xlsxwriter`: https://xlsxwriter.readthedocs.io
@@ -74,6 +77,11 @@ def set_header(df: pd.DataFrame, sheet: Worksheet, wbfmt: Wb_Format) -> None:
 
 def set_grid(df: pd.DataFrame, sheet: Worksheet, wbfmt: Wb_Format) -> None:
     ...
+    # TODO: It's quite buggy as it will overlap the existing format, which causes
+    # the date format be erased
+    # for (i, row) in enumerate(df.itertuples()):
+    #     for (j, v) in enumerate(row):
+    #         sheet.write(i + 1, j, v, wbfmt)
 
 
 def gen_styler_comma(cols: list[str]) -> tuple[Styler, Format]:
@@ -91,7 +99,10 @@ style_fmts: dict[str, Format] = {
         'valign': 'top',
         'fg_color': '#538DD5',
         'color': "white",
-        'border': 1
+        'bottom': 1,
+    },
+    "grid": {
+        'border': 1,
     }
 }
 
@@ -99,7 +110,7 @@ style_fmts: dict[str, Format] = {
 default_stylers: list[tuple[Styler, Format]] = [
     (set_date_col_width, None),
     (set_header, style_fmts['header']),
-    (set_grid, None),
+    (set_grid, style_fmts["grid"]),
 ]
 
 
