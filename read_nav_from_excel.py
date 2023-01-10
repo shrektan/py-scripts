@@ -26,6 +26,7 @@ import re
 import argparse
 from typing import Optional
 import logging
+import subprocess
 
 
 @dataclass
@@ -155,6 +156,9 @@ def main() -> None:
         "--overwrite", help="overwrite the `toexcel` if exists",
         action="store_true", default=False)
     parser.add_argument(
+        "-o", help="open the output excel file when job is over",
+        action="store_true", default=False)
+    parser.add_argument(
         '-v', "--verbose", help="display the info message",
         action="store_true", default=False)
     parser.add_argument(
@@ -179,6 +183,9 @@ def main() -> None:
     out = read_navs(excels, date_rgs=eval(opt.date_rgs),
                     nav_nms=eval(opt.nav_nms), sheet=opt.sheet)
     out.to_excel(opt.toexcel)
+
+    if opt.o:
+        subprocess.run(["open", str(opt.toexcel)])
 
 
 if __name__ == "__main__":
