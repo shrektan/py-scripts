@@ -66,6 +66,8 @@ def set_date_col_width(df: pd.DataFrame, sheet: Worksheet, wbfmt: Wb_Format) -> 
 
 
 def set_header(df: pd.DataFrame, sheet: Worksheet, wbfmt: Wb_Format) -> None:
+    # TODO: should be auto adjusted according to if Index be written or not
+    sheet.write(0, 0, "Index", wbfmt)
     for col_num, value in enumerate(df.columns.values):
         sheet.write(0, col_num + 1, value, wbfmt)
 
@@ -82,12 +84,13 @@ def gen_styler_percent(cols: list[str]) -> tuple[Styler, Format]:
     ...
 
 
-default_formats: dict[str, Format] = {
+style_fmts: dict[str, Format] = {
     "header": {
         'bold': True,
         'text_wrap': True,
         'valign': 'top',
-        'fg_color': '#D7E4BC',
+        'fg_color': '#538DD5',
+        'color': "white",
         'border': 1
     }
 }
@@ -95,7 +98,7 @@ default_formats: dict[str, Format] = {
 
 default_stylers: list[tuple[Styler, Format]] = [
     (set_date_col_width, None),
-    (set_header, default_formats['header']),
+    (set_header, style_fmts['header']),
     (set_grid, None),
 ]
 
@@ -118,7 +121,7 @@ def make_stylers(comma, percent) -> list[tuple[Styler, Format]]:
 def write(df: pd.DataFrame | Dict_DF |
           tuple[pd.DataFrame] | list[pd.DataFrame],
           path: str, /,
-          comma: Optional[list[str]], percent: Optional[list[str]],
+          comma: Optional[list[str]] = None, percent: Optional[list[str]] = None,
           overwrite: bool = False, open: bool = False) -> Path:
     filepath = Path(path).expanduser()
     if filepath.suffix != ".xlsx":
