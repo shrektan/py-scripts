@@ -25,10 +25,13 @@ Plan to submit to `pip` when matured
 - `xlsxwriter`: https://xlsxwriter.readthedocs.io
 """
 import xlsxwriter as xw
-
 import pandas as pd
 from pathlib import Path
 import subprocess
+from typing import Callable, Optional
+
+Dict_DF = dict[str, pd.DataFrame]
+Styler = Callable[[pd.DataFrame, xw.workbook.Worksheet], None]
 
 
 def check_elem_df(x: dict) -> None:
@@ -38,8 +41,8 @@ def check_elem_df(x: dict) -> None:
                 f"all elem of df must be DataFrame, but find {type(v)}")
 
 
-def make_dict(df: pd.DataFrame | dict[str, pd.DataFrame] |
-              tuple[pd.DataFrame] | list[pd.DataFrame]) -> dict[str, pd.DataFrame]:
+def make_dict(df: pd.DataFrame | Dict_DF |
+              tuple[pd.DataFrame] | list[pd.DataFrame]) -> Dict_DF:
     if isinstance(df, dict):
         x = df
     elif isinstance(df, pd.DataFrame):
@@ -55,9 +58,51 @@ def make_dict(df: pd.DataFrame | dict[str, pd.DataFrame] |
     return x
 
 
-def write(df: pd.DataFrame | dict[str, pd.DataFrame] |
+def set_date_col_width(df: pd.DataFrame, sheet: xw.workbook.Worksheet) -> None:
+    raise NotImplementedError
+
+
+def set_header(df: pd.DataFrame, sheet: xw.workbook.Worksheet) -> None:
+    raise NotImplementedError
+
+
+def set_grid(df: pd.DataFrame, sheet: xw.workbook.Worksheet) -> None:
+    raise NotImplementedError
+
+
+def gen_styler_comma(cols: list[str]) -> Styler:
+    raise NotImplementedError
+
+
+def gen_styler_percent(cols: list[str]) -> Styler:
+    raise NotImplementedError
+
+
+default_stylers: list[Styler] = [
+    set_date_col_width,
+    set_header,
+    set_grid,
+]
+
+
+def apply(x: Dict_DF, wb: xw.Workbook, styler: Styler) -> None:
+    for (df, ws) in zip(x.values(), wb.worksheets()):
+        styler(df, ws)
+
+
+def make_stylers(comma, percent) -> list[Styler]:
+    stylers = default_stylers.copy()
+    if comma is not None:
+        stylers.append(gen_styler_comma(comma))
+    if percent is not None:
+        stylers.append(gen_styler_percent(percent))
+    return stylers
+
+
+def write(df: pd.DataFrame | Dict_DF |
           tuple[pd.DataFrame] | list[pd.DataFrame],
           path: str, /,
+          comma: Optional[list[str]], percent: Optional[list[str]],
           overwrite: bool = False, open: bool = False) -> Path:
     filepath = Path(path).expanduser()
     if filepath.suffix != ".xlsx":
@@ -66,13 +111,17 @@ def write(df: pd.DataFrame | dict[str, pd.DataFrame] |
         raise FileExistsError(f"{path} already exists")
     x = make_dict(df)
 
-    # when specifying `engine="xlsxwriter"`, the typehints will report false error
-    # I think it's a bug of pandas, as it doesn't specify xlsxwriter as legal literal
-    # but this should work, according to the doc, as long as the path is xlsx and
-    # the xlsxwriter is installed, which this module imported thus guarantees this.
-    with pd.ExcelWriter(filepath) as writer:
+    stylers = make_stylers(comma, percent)
+
+    with pd.ExcelWriter(filepath, engine="xlsxwriter") as writer:  # type: ignore
         for (nm, v) in x.items():
             v.to_excel(writer, nm)
+        # when specifying `engine="xlsxwriter"`, the typehints will report false error
+        # I think it's a bug of pandas, as it doesn't specify "xlsxwriter" as the
+        # legal literal so we ignore the type error here
+        book: xw.Workbook = writer.book  # type: ignore
+        for style in stylers:
+            apply(x, book, style)
 
     if open:
         subprocess.run(["open", str(filepath)])
