@@ -83,7 +83,8 @@ style_fmts: dict[str, Dict_Format] = {
 def write_df(df: pd.DataFrame, sheet: Worksheet,
              head_fmt: Optional[Wb_Format], cell_fmt: Optional[Wb_Format]) -> None:
     # TODO: add index support
-    # column width to 12, so date can display
+    # column width to 12, so date can display;
+    # this can be set in wb creator via default_col_width
     sheet.set_column(0, len(df.columns) - 1, width=12, cell_format=cell_fmt)
     # header
     for j, value in enumerate(df.columns.values):
@@ -96,7 +97,7 @@ def write_df(df: pd.DataFrame, sheet: Worksheet,
 def write(df: pd.DataFrame | Dict_DF |
           tuple[pd.DataFrame] | list[pd.DataFrame],
           path: str, /,
-          comma: Optional[list[str]] = None, percent: Optional[list[str]] = None,
+          #   comma: Optional[list[str]] = None, percent: Optional[list[str]] = None,
           overwrite: bool = False, open: bool = False) -> Path:
     filepath = Path(path).expanduser()
     if filepath.suffix != ".xlsx":
