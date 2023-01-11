@@ -23,6 +23,8 @@ be set accordingly.
 - We should not use `DataFrame.to_xlsx()`. It makes everything complicated.
   We should just write the cell by ourselves.
 - Be able to add Index
+- Auto fit the column and support Chinese strings, the wb.autofit() doesn't
+  work well. For date there's no padding. For CN strings, it's not correct.
 - Plan to submit to `pip` when matured
 
 ## Dependencies:
@@ -92,6 +94,7 @@ def write_df(df: pd.DataFrame, sheet: Worksheet,
     # content
     for (j, col) in enumerate(df.columns):
         sheet.write_column(1, j, df[col])
+    sheet.autofit()
 
 
 def write(df: pd.DataFrame | Dict_DF |
