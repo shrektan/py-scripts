@@ -22,6 +22,7 @@ be set accordingly.
 ## TODO
 - We should not use `DataFrame.to_xlsx()`. It makes everything complicated.
   We should just write the cell by ourselves.
+- Be able to add Index
 - Plan to submit to `pip` when matured
 
 ## Dependencies:
@@ -64,34 +65,6 @@ def make_dict(df: pd.DataFrame | Dict_DF |
     return x
 
 
-def set_date_col_width(df: pd.DataFrame, sheet: Worksheet, wbfmt: Wb_Format) -> None:
-    ...
-
-
-def set_header(df: pd.DataFrame, sheet: Worksheet, wbfmt: Wb_Format) -> None:
-    # TODO: should be auto adjusted according to if Index be written or not
-    sheet.write(0, 0, "Index", wbfmt)
-    for col_num, value in enumerate(df.columns.values):
-        sheet.write(0, col_num + 1, value, wbfmt)
-
-
-def set_grid(df: pd.DataFrame, sheet: Worksheet, wbfmt: Wb_Format) -> None:
-    ...
-    # TODO: It's quite buggy as it will overlap the existing format, which causes
-    # the date format be erased
-    # for (i, row) in enumerate(df.itertuples()):
-    #     for (j, v) in enumerate(row):
-    #         sheet.write(i + 1, j, v, wbfmt)
-
-
-def gen_styler_comma(cols: list[str]) -> tuple[Styler, Dict_Format]:
-    ...
-
-
-def gen_styler_percent(cols: list[str]) -> tuple[Styler, Dict_Format]:
-    ...
-
-
 style_fmts: dict[str, Dict_Format] = {
     "header": {
         'bold': True,
@@ -107,38 +80,17 @@ style_fmts: dict[str, Dict_Format] = {
 }
 
 
-default_stylers: list[tuple[Styler, Dict_Format]] = [
-    (set_date_col_width, None),
-    (set_header, style_fmts['header']),
-    (set_grid, style_fmts["cell"]),
-]
-
-
-def apply(x: Dict_DF, wb: xw.Workbook, styler: Styler, fmt: Dict_Format) -> None:
-    wbfmt = wb.add_format(fmt)
-    for (df, ws) in zip(x.values(), wb.worksheets()):
-        styler(df, ws, wbfmt)
-
-
-def make_stylers(comma, percent) -> list[tuple[Styler, Dict_Format]]:
-    stylers = default_stylers.copy()
-    if comma is not None:
-        stylers.append(gen_styler_comma(comma))
-    if percent is not None:
-        stylers.append(gen_styler_percent(percent))
-    return stylers
-
-
 def write_df(df: pd.DataFrame, sheet: Worksheet,
              head_fmt: Optional[Wb_Format], cell_fmt: Optional[Wb_Format]) -> None:
+    # TODO: add index support
+    # column width to 12, so date can display
+    sheet.set_column(0, len(df.columns) - 1, width=12, cell_format=cell_fmt)
     # header
-    sheet.write(0, 0, "Index", head_fmt)
     for j, value in enumerate(df.columns.values):
-        sheet.write(0, j + 1, value, head_fmt)
+        sheet.write(0, j, value, head_fmt)
     # content
-    for (i, row) in enumerate(df.itertuples()):
-        for (j, value) in enumerate(row):
-            sheet.write(i + 1, j, value, cell_fmt)
+    for (j, col) in enumerate(df.columns):
+        sheet.write_column(1, j, df[col])
 
 
 def write(df: pd.DataFrame | Dict_DF |
@@ -153,27 +105,15 @@ def write(df: pd.DataFrame | Dict_DF |
         raise FileExistsError(f"{path} already exists")
     x = make_dict(df)
 
-    with pd.ExcelWriter(filepath, engine="xlsxwriter") as writer:  # type: ignore
-        for (nm, v) in x.items():
-            v.to_excel(writer, nm)
-        # when specifying `engine="xlsxwriter"`, the typehints will report false error
-        # I think it's a bug of pandas, as it doesn't specify "xlsxwriter" as the
-        # legal literal so we ignore the type error here
-        wb: xw.Workbook = writer.book  # type: ignore
+    with xw.Workbook(filepath, {'default_date_format': 'yyyy-mm-dd'}) as wb:
         head_fmt = wb.add_format(style_fmts["header"])
-        cell_fmt = wb.add_format(style_fmts["cell"])
-        for (df, ws) in zip(x.values(), wb.worksheets()):
-            write_df(df, ws, head_fmt, cell_fmt)
+        # TODO: when applied cell_fmt, the default date_format will be replaced
+        # we need to find a way to know the cell type is date and set the format
+        # cell_fmt = wb.add_format(style_fmts["cell"])
+        for (nm, df) in x.items():
+            ws = wb.add_worksheet(nm)
+            write_df(df, ws, head_fmt, None)
 
     if open:
         subprocess.run(["open", str(filepath)])
     return filepath
-
-
-def main() -> None:
-    import tests.test_writexlsx as t
-    t.test_write(Path("~/Downloads"))
-
-
-if __name__ == "__main__":
-    main()
