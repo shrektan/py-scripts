@@ -35,7 +35,7 @@ import subprocess
 from typing import Callable, Optional, Any
 
 Dict_DF = dict[str, pd.DataFrame]
-Format = Optional[dict[str, Any]]
+Dict_Format = Optional[dict[str, Any]]
 Wb_Format = xw.workbook.Format
 Styler = Callable[[pd.DataFrame, Worksheet, Wb_Format], None]
 
@@ -84,15 +84,15 @@ def set_grid(df: pd.DataFrame, sheet: Worksheet, wbfmt: Wb_Format) -> None:
     #         sheet.write(i + 1, j, v, wbfmt)
 
 
-def gen_styler_comma(cols: list[str]) -> tuple[Styler, Format]:
+def gen_styler_comma(cols: list[str]) -> tuple[Styler, Dict_Format]:
     ...
 
 
-def gen_styler_percent(cols: list[str]) -> tuple[Styler, Format]:
+def gen_styler_percent(cols: list[str]) -> tuple[Styler, Dict_Format]:
     ...
 
 
-style_fmts: dict[str, Format] = {
+style_fmts: dict[str, Dict_Format] = {
     "header": {
         'bold': True,
         'text_wrap': True,
@@ -101,32 +101,44 @@ style_fmts: dict[str, Format] = {
         'color': "white",
         'bottom': 1,
     },
-    "grid": {
-        'border': 1,
+    "cell": {
+        'bottom': 1,
     }
 }
 
 
-default_stylers: list[tuple[Styler, Format]] = [
+default_stylers: list[tuple[Styler, Dict_Format]] = [
     (set_date_col_width, None),
     (set_header, style_fmts['header']),
-    (set_grid, style_fmts["grid"]),
+    (set_grid, style_fmts["cell"]),
 ]
 
 
-def apply(x: Dict_DF, wb: xw.Workbook, styler: Styler, fmt: Format) -> None:
+def apply(x: Dict_DF, wb: xw.Workbook, styler: Styler, fmt: Dict_Format) -> None:
     wbfmt = wb.add_format(fmt)
     for (df, ws) in zip(x.values(), wb.worksheets()):
         styler(df, ws, wbfmt)
 
 
-def make_stylers(comma, percent) -> list[tuple[Styler, Format]]:
+def make_stylers(comma, percent) -> list[tuple[Styler, Dict_Format]]:
     stylers = default_stylers.copy()
     if comma is not None:
         stylers.append(gen_styler_comma(comma))
     if percent is not None:
         stylers.append(gen_styler_percent(percent))
     return stylers
+
+
+def write_df(df: pd.DataFrame, sheet: Worksheet,
+             head_fmt: Optional[Wb_Format], cell_fmt: Optional[Wb_Format]) -> None:
+    # header
+    sheet.write(0, 0, "Index", head_fmt)
+    for j, value in enumerate(df.columns.values):
+        sheet.write(0, j + 1, value, head_fmt)
+    # content
+    for (i, row) in enumerate(df.itertuples()):
+        for (j, value) in enumerate(row):
+            sheet.write(i + 1, j, value, cell_fmt)
 
 
 def write(df: pd.DataFrame | Dict_DF |
@@ -141,18 +153,27 @@ def write(df: pd.DataFrame | Dict_DF |
         raise FileExistsError(f"{path} already exists")
     x = make_dict(df)
 
-    stylers = make_stylers(comma, percent)
-
     with pd.ExcelWriter(filepath, engine="xlsxwriter") as writer:  # type: ignore
         for (nm, v) in x.items():
             v.to_excel(writer, nm)
         # when specifying `engine="xlsxwriter"`, the typehints will report false error
         # I think it's a bug of pandas, as it doesn't specify "xlsxwriter" as the
         # legal literal so we ignore the type error here
-        book: xw.Workbook = writer.book  # type: ignore
-        for v in stylers:
-            apply(x, book, v[0], v[1])
+        wb: xw.Workbook = writer.book  # type: ignore
+        head_fmt = wb.add_format(style_fmts["header"])
+        cell_fmt = wb.add_format(style_fmts["cell"])
+        for (df, ws) in zip(x.values(), wb.worksheets()):
+            write_df(df, ws, head_fmt, cell_fmt)
 
     if open:
         subprocess.run(["open", str(filepath)])
     return filepath
+
+
+def main() -> None:
+    import tests.test_writexlsx as t
+    t.test_write(Path("~/Downloads"))
+
+
+if __name__ == "__main__":
+    main()
