@@ -6,6 +6,9 @@ total_page和excel_path分别表示爬取的页面范围和生成的excel地址
 import requests
 import bs4
 import pandas as pd
+import writexlsx
+import argparse
+import subprocess
 
 
 def read_tbl(page: int) -> pd.DataFrame | None:
@@ -52,24 +55,47 @@ def read_tbl(page: int) -> pd.DataFrame | None:
 
 
 def main() -> None:
-    out: list[pd.DataFrame] = []
-    msg: str = "The total pages to be downloaded (check the website by yourself):\n"
-    total_page: int = int(input(msg))
-    print(f"total page is set to {total_page}")
+    zbdurl = "https://www.zhongbaodeng.com/channel/"
+    "350b43d4af88460b93ccd46658cf631e.html"
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-p', '--pages', type=int,
+        help="the total pages to be downloaded (check the website by yourself), "
+        "must be positive.")
+    parser.add_argument(
+        '-o', '--open', action='store_true', default=False,
+        help="open the excel file when finished")
+    parser.add_argument(
+        "--overwrite", help="overwrite the `toexcel` if exists",
+        action="store_true", default=False)
+    parser.add_argument(
+        "--openzbd", action="store_true", default=False,
+        help="open the 中保登组合类产品登记网页: "
+        f"{zbdurl} "
+    )
+    parser.add_argument(
+        'outfile', help="the excel file to store the result")
+    opt = parser.parse_args()
+
+    if opt.openzbd:
+        subprocess.run(["open", zbdurl])
+        return None
+
+    outfile = opt.outfile
+    total_page = opt.pages
     if total_page < 1:
         raise ValueError(f"The {total_page=} must be positive integer!")
+
+    out: list[pd.DataFrame] = []
     for i in range(1, total_page):
         print(f"fetching page {i}")
         r = read_tbl(i)
         if r is not None:
             out.append(r)
     tbl: pd.DataFrame = pd.concat(out, ignore_index=True)
-
-    excel_path: str = "~/Downloads/组合类产品登记信息.xlsx"
-    print(f"writing to excel: {excel_path}")
-    tbl.to_excel(excel_path, index=False)
-
-    print("done")
+    writexlsx.write({"组合类产品": tbl}, outfile,
+                    open=opt.open, overwrite=opt.overwrite)
+    print(f"the result has been saved to excel: {outfile}")
 
 
 if __name__ == "__main__":
