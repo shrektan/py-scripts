@@ -2,6 +2,9 @@
 主要目的是为了爬取组合类产品的注册登记信息
 具体表单的获取方式，是从网页源代码找到的
 total_page和excel_path分别表示爬取的页面范围和生成的excel地址
+
+# TODO
+- add verbose argument and use logging to display the message
 """
 import requests
 import bs4
