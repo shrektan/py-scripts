@@ -8,6 +8,8 @@ import pandas as pd
 import logging
 import re
 import argparse
+from typing import Optional
+import writexlsx
 
 
 def rate2num(x: pd.Series) -> list | pd.Series:
@@ -83,10 +85,13 @@ def rm_garbage(x: str) -> list[str]:
     return x.strip().split("\n")
 
 
-def read_tbl(pdf_path: pathlib.Path) -> pd.DataFrame:
+def read_tbl(pdf_path: pathlib.Path, pages: Optional[list[int]] = None) -> pd.DataFrame:
     out: list[pd.DataFrame] = []
     p: PdfFileReader = PdfFileReader(pdf_path)
     for i in range(p.getNumPages()):
+        if pages is not None:
+            if i + 1 not in pages:
+                break
         logging.info(f"handling page {i + 1}/{p.getNumPages()}")
         txt = list(map(rm_space, rm_garbage(p.getPage(i).extract_text())))
         normal_df = conv_normal(txt)
@@ -111,13 +116,35 @@ def main() -> None:
     parser.add_argument("pdf", type=str, help="中保登月度组合行情-开放式组合类资管产品清单的文档路径")
     parser.add_argument("excel", type=str, help="生成的Excel路径")
     parser.add_argument(
+        '-p', "--pages", type=str,
+        help="the page range to be parsed, starting from 1",
+        default=None)
+    parser.add_argument(
         '-v', "--verbose", help="display the info message",
         action="store_true", default=False)
     parser.add_argument(
         '-d', "--debug", help="display the debug message",
         action="store_true", default=False)
+    parser.add_argument(
+        "--overwrite", help="overwrite the excel if it exists",
+        action="store_true", default=False)
+    parser.add_argument(
+        "-o", "--open", help="open the output excel file when job is over",
+        action="store_true", default=False)
 
     opt = parser.parse_args()
+
+    if opt.pages is None:
+        pages = None
+    else:
+        pages_raw = eval(opt.pages)
+        if isinstance(pages_raw, range):
+            pages = list(pages_raw)
+        elif isinstance(pages_raw, int):
+            pages = [pages_raw]
+        else:
+            raise TypeError(
+                f"{opt.pages} are not valid input, must be eval to int or range")
 
     if opt.debug:
         logging.basicConfig(level=logging.DEBUG)
@@ -130,9 +157,10 @@ def main() -> None:
     out_path = pathlib.Path(opt.excel).expanduser()
     if not pdf_path.exists():
         raise FileNotFoundError(f"{opt.pdf}")
-    if out_path.exists():
+    if not opt.overwrite and out_path.exists():
         raise FileExistsError(f"{opt.excel}")
-    read_tbl(pdf_path).to_excel(out_path)
+    df = read_tbl(pdf_path, pages)
+    writexlsx.write(df, out_path, overwrite=opt.overwrite, open=opt.open)
 
 
 if __name__ == "__main__":
