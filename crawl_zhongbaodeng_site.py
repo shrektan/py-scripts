@@ -58,8 +58,8 @@ def read_tbl(page: int) -> pd.DataFrame | None:
 
 
 def main() -> None:
-    zbdurl = "https://www.zhongbaodeng.com/channel/"
-    "350b43d4af88460b93ccd46658cf631e.html"
+    zbdurl = ("https://www.zhongbaodeng.com/channel/"
+              "350b43d4af88460b93ccd46658cf631e.html")
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '-p', '--pages', type=int,
