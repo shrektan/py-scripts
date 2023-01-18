@@ -22,7 +22,7 @@ def rate2num(x: pd.Series) -> list | pd.Series:
         elif elem.find("%") > -1:
             out.append(pd.to_numeric(elem.replace("%", "")) / 100.0)
         else:
-            out.append(pd.to_numeric(elem, errors="ignore"))
+            out.append(pd.to_numeric(elem))
     return out
 
 
@@ -91,7 +91,7 @@ def read_tbl(pdf_path: pathlib.Path, pages: Optional[list[int]] = None) -> pd.Da
     for i in range(p.getNumPages()):
         if pages is not None:
             if i + 1 not in pages:
-                break
+                continue
         logging.info(f"handling page {i + 1}/{p.getNumPages()}")
         txt = list(map(rm_space, rm_garbage(p.getPage(i).extract_text())))
         normal_df = conv_normal(txt)
@@ -101,13 +101,12 @@ def read_tbl(pdf_path: pathlib.Path, pages: Optional[list[int]] = None) -> pd.Da
         out.append(df)
         logging.debug(
             f"page {i} has {len(df)} rows with {find_prod_type(txt)} type")
-
+    if len(out) == 0:
+        raise RuntimeError("no table content found")
     out2: pd.DataFrame = pd.concat(out, ignore_index=True)
-    out2["产品成立时间"] = pd.to_datetime(
-        out2["产品成立时间"], format="%Y%m%d", errors="ignore")
-    out2["期末累计单位净值(元/份)"] = pd.to_numeric(out2["期末累计单位净值(元/份)"],
-                                          errors="ignore")
-    out2["期末净资产(亿元)"] = pd.to_numeric(out2["期末净资产(亿元)"], errors="ignore")
+    out2["产品成立时间"] = pd.to_datetime(out2["产品成立时间"], format="%Y%m%d")
+    out2["期末累计单位净值(元/份)"] = pd.to_numeric(out2["期末累计单位净值(元/份)"])
+    out2["期末净资产(亿元)"] = pd.to_numeric(out2["期末净资产(亿元)"])
     out2["当月累计单位净值增长率"] = rate2num(out2["当月累计单位净值增长率"])
     out2["年初以来累计单位净值增长率"] = rate2num(out2["年初以来累计单位净值增长率"])
     return out2
