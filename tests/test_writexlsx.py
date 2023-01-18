@@ -12,7 +12,7 @@ def test_write(tmp_path) -> None:
     })
 
     df2 = pd.DataFrame({
-        "Col1": [12, 12.455, 13],
+        "Col1": [12, 12.455, pd.NA],
         "Col2": pd.Series(pd.date_range("2023-09-02", periods=3)),
         "Col3": ["ABC", "BCD", "EFFFF"]
     })

@@ -93,16 +93,20 @@ def write_df(df: pd.DataFrame, sheet: Worksheet,
         sheet.write(0, j, value, head_fmt)
     # content
     for (j, col) in enumerate(df.columns):
-        sheet.write_column(1, j, df[col])
-    sheet.autofit()
+        # xlsxwriter doesn't support writting NA directly
+        sheet.write_column(1, j, df[col].fillna(""))
+    # sheet.autofit()
 
 
 def write(df: pd.DataFrame | Dict_DF |
           tuple[pd.DataFrame] | list[pd.DataFrame],
-          path: str, /,
+          path: str | Path, /,
           #   comma: Optional[list[str]] = None, percent: Optional[list[str]] = None,
           overwrite: bool = False, open: bool = False) -> Path:
-    filepath = Path(path).expanduser()
+    if isinstance(path, str):
+        filepath = Path(path).expanduser()
+    else:
+        filepath = path
     if filepath.suffix != ".xlsx":
         raise NameError(f"The path must end with .xlsx ({path})")
     if filepath.exists() and not overwrite:
