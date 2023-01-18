@@ -22,7 +22,7 @@ def rate2num(x: pd.Series) -> list | pd.Series:
         elif elem.find("%") > -1:
             out.append(pd.to_numeric(elem.replace("%", "")) / 100.0)
         else:
-            out.append(pd.to_numeric(elem))
+            out.append(pd.to_numeric(elem, errors="ignore"))
     return out
 
 
@@ -36,7 +36,7 @@ def find_prod_type(x: list[str]) -> str:
 
 
 def conv_normal(x: list[str]) -> pd.DataFrame:
-    txt = filter(lambda x: x.count(" ") == 6, x)
+    txt = filter(lambda x: x.count(" ") == 6 and x.find("产品全称") == -1, x)
     cols = [
         "产品全称", "产品成立时间", "期末累计单位净值(元/份)",
         "当月累计单位净值增长率", "年初以来累计单位净值增长率", "期末净资产(亿元)", "产品管理机构"
@@ -45,7 +45,7 @@ def conv_normal(x: list[str]) -> pd.DataFrame:
 
 
 def conv_mmp(x: list[str]) -> pd.DataFrame:
-    txt = filter(lambda x: x.count(" ") == 4, x)
+    txt = filter(lambda x: x.count(" ") == 4 and x.find("产品全称") == -1, x)
     cols = ["产品全称", "产品成立时间", "年初以来累计单位净值增长率", "期末净资产(亿元)", "产品管理机构"]
     out = pd.DataFrame(map(lambda x: x.split(" "), txt), columns=cols)
     out["期末累计单位净值(元/份)"] = pd.NA
@@ -103,9 +103,11 @@ def read_tbl(pdf_path: pathlib.Path, pages: Optional[list[int]] = None) -> pd.Da
             f"page {i} has {len(df)} rows with {find_prod_type(txt)} type")
 
     out2: pd.DataFrame = pd.concat(out, ignore_index=True)
-    out2["产品成立时间"] = pd.to_datetime(out2["产品成立时间"], format="%Y%m%d")
-    out2["期末累计单位净值(元/份)"] = pd.to_numeric(out2["期末累计单位净值(元/份)"])
-    out2["期末净资产(亿元)"] = pd.to_numeric(out2["期末净资产(亿元)"])
+    out2["产品成立时间"] = pd.to_datetime(
+        out2["产品成立时间"], format="%Y%m%d", errors="ignore")
+    out2["期末累计单位净值(元/份)"] = pd.to_numeric(out2["期末累计单位净值(元/份)"],
+                                          errors="ignore")
+    out2["期末净资产(亿元)"] = pd.to_numeric(out2["期末净资产(亿元)"], errors="ignore")
     out2["当月累计单位净值增长率"] = rate2num(out2["当月累计单位净值增长率"])
     out2["年初以来累计单位净值增长率"] = rate2num(out2["年初以来累计单位净值增长率"])
     return out2
