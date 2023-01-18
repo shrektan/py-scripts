@@ -7,6 +7,7 @@ from PyPDF2 import PdfFileReader
 import pandas as pd
 import logging
 import re
+import argparse
 
 
 def rate2num(x: pd.Series) -> list | pd.Series:
@@ -86,7 +87,7 @@ def read_tbl(pdf_path: pathlib.Path) -> pd.DataFrame:
     out: list[pd.DataFrame] = []
     p: PdfFileReader = PdfFileReader(pdf_path)
     for i in range(p.getNumPages()):
-        logging.info(f"handling page {i}/{p.getNumPages()}")
+        logging.info(f"handling page {i + 1}/{p.getNumPages()}")
         txt = list(map(rm_space, rm_garbage(p.getPage(i).extract_text())))
         normal_df = conv_normal(txt)
         mmp_df = conv_mmp(txt)
@@ -106,22 +107,31 @@ def read_tbl(pdf_path: pathlib.Path) -> pd.DataFrame:
 
 
 def main() -> None:
-    logging.basicConfig(level=logging.INFO, force=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("pdf", type=str, help="中保登月度组合行情-开放式组合类资管产品清单的文档路径")
+    parser.add_argument("excel", type=str, help="生成的Excel路径")
+    parser.add_argument(
+        '-v', "--verbose", help="display the info message",
+        action="store_true", default=False)
+    parser.add_argument(
+        '-d', "--debug", help="display the debug message",
+        action="store_true", default=False)
+
+    opt = parser.parse_args()
+
+    if opt.debug:
+        logging.basicConfig(level=logging.DEBUG)
+    elif opt.verbose:
+        logging.basicConfig(level=logging.INFO)
+
     pd.set_option('display.unicode.ambiguous_as_wide', True)
     pd.set_option('display.unicode.east_asian_width', True)
-    ym = (2021, 12)
-    pdf_path = pathlib.Path((
-        "/Users/shrektan/Library/CloudStorage/OneDrive-共享的库-onedrive/"
-        "安联资管文档/监管和协会资料/组合类产品信息/保险资产管理产品行业报告"
-        f"（{ym[0]:>04}年{ym[1]:>02}月）-组合行情-开放式组合类资管产品清单.pdf"
-    ))
-    out_path = pathlib.Path(
-        f"~/Downloads/中保登数据-{ym[0]:>04}年{ym[1]:>02}月.xlsx").expanduser()
-    logging.info(f"The input PDF file is `{pdf_path.name}`")
+    pdf_path = pathlib.Path(opt.pdf).expanduser()
+    out_path = pathlib.Path(opt.excel).expanduser()
     if not pdf_path.exists():
-        raise FileNotFoundError(f"{pdf_path}")
+        raise FileNotFoundError(f"{opt.pdf}")
     if out_path.exists():
-        raise FileExistsError(f"{out_path}")
+        raise FileExistsError(f"{opt.excel}")
     read_tbl(pdf_path).to_excel(out_path)
 
 
