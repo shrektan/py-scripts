@@ -54,8 +54,8 @@ class CallOption:
     def price(self) -> float:
         if self.expired:
             return self.payoff
-        return norm(self.d1) - norm(self.d2) *\
-            self.strike * exp(-self.rf * self.mty)
+        return norm(self.d1) * self.spot - \
+            norm(self.d2) * self.strike * exp(-self.rf * self.mty)
 
     def expire(self, time: float) -> None:
         self.mty -= time
