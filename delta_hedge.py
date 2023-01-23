@@ -29,6 +29,8 @@ class CallOption:
 
     @property
     def d1(self) -> float:
+        if self.expired:
+            return float("nan")
         return 1.0 / (self.sigma * sqrt(self.mty)) * (
             log(self.spot / self.strike) +
             (self.rf + self.sigma ** 2.0 / 2.0 * self.mty)
@@ -40,15 +42,27 @@ class CallOption:
 
     @property
     def delta(self) -> float:
+        if self.expired:
+            return 0.0
         return norm(self.d1)
 
     @property
+    def payoff(self) -> float:
+        return max(self.spot - self.strike, 0.0)
+
+    @property
     def price(self) -> float:
+        if self.expired:
+            return self.payoff
         return norm(self.d1) - norm(self.d2) *\
             self.strike * exp(-self.rf * self.mty)
 
     def expire(self, time: float) -> None:
         self.mty -= time
+
+    @property
+    def expired(self) -> bool:
+        return self.mty <= 0.0
 
 
 @dataclass
