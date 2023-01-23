@@ -89,12 +89,13 @@ def price_ts(p0: float, er: float, evol: float,
 class AccountBook:
     timepoint: list[float] = field(init=False, default_factory=list)
     asset_qty: list[float] = field(init=False, default_factory=list)
+    asset_price: list[float] = field(init=False, default_factory=list)
     cash: list[float] = field(init=False, default_factory=list)
     mv: list[float] = field(init=False, default_factory=list)
     call_delta: list[float] = field(init=False, default_factory=list)
     call_price: list[float] = field(init=False, default_factory=list)
 
-    def add(self, t: float, q: float, cash: float,
+    def add(self, t: float, q: float, cash: float, assetp: float,
             mv: float, delta: float, callp: float) -> None:
         self.timepoint.append(t)
         self.asset_qty.append(q)
@@ -102,11 +103,13 @@ class AccountBook:
         self.mv.append(mv)
         self.call_delta.append(delta)
         self.call_price.append(callp)
+        self.asset_price.append(assetp)
 
     def export(self) -> pd.DataFrame:
         out = pd.DataFrame({
             "TimePoint": self.timepoint,
             "AssetQty": self.asset_qty,
+            "AssetPrice": self.asset_price,
             "Cash": self.cash,
             "MV": self.mv,
             "CallDelta": self.call_delta,
@@ -178,7 +181,8 @@ class CallOptionReplicaPtf():
 
     def record(self) -> None:
         self.booking.add(
-            t=self.timepoint, q=self.asset_qty, cash=self.cash, mv=self.mv,
+            t=self.timepoint, q=self.asset_qty,  assetp=self.asset_price,
+            cash=self.cash, mv=self.mv,
             delta=self.call_option.delta, callp=self.call_option.price
         )
 
