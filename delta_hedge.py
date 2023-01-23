@@ -3,8 +3,8 @@ for call options with different hedging frequency
 """
 
 from dataclasses import dataclass, field
-import scipy.stats
 from math import sqrt, log, exp, isclose
+import scipy.stats
 import numpy as np
 import pandas as pd
 import writexlsx
@@ -73,11 +73,11 @@ class PriceTS():
 
 def price_ts(p0: float, er: float, evol: float,
              days: int, times_per_day: int) -> PriceTS:
-    N_TRADING_DAYS_PER_YEAR = 252
-    n = days * times_per_day
-    er_daily = er / N_TRADING_DAYS_PER_YEAR
-    evol_daily = evol / sqrt(N_TRADING_DAYS_PER_YEAR)
-    rtn_daily = np.random.normal(er_daily, evol_daily, n)
+    trading_days_per_year = 252
+    total_points = days * times_per_day
+    er_daily = er / trading_days_per_year
+    evol_daily = evol / sqrt(trading_days_per_year)
+    rtn_daily = np.random.normal(er_daily, evol_daily, total_points)
     points0 = np.array(range(1, days + 1)) / times_per_day
     prices0 = p0 * (np.cumprod(1 + rtn_daily) - 1)
     points = np.insert(points0, 0, 0.0)
