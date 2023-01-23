@@ -130,7 +130,7 @@ class CallOptionReplicaPtf():
     total_steps: int = field(init=False)
     asset_prices: PriceTS = field(init=False)
     asset_qty: float = field(init=False, default=0)
-    timepoint: int = field(init=False, default=0)
+    reb_count: int = field(init=False, default=0)
     booking: AccountBook = field(init=False, default_factory=AccountBook)
 
     @property
@@ -138,12 +138,16 @@ class CallOptionReplicaPtf():
         return 1 / self.reb_times_per_day
 
     @property
+    def timepoint(self) -> float:
+        return self.reb_count / self.reb_times_per_day
+
+    @property
     def mty(self) -> float:
-        return self.total_days - self.timepoint / self.reb_times_per_day
+        return self.total_days - self.timepoint
 
     @property
     def asset_price(self) -> float:
-        return self.asset_prices.prices[self.timepoint]
+        return self.asset_prices.prices[self.reb_count]
 
     def __post_init__(self) -> None:
         self.total_days = int(self.call_option.mty)
@@ -176,7 +180,7 @@ class CallOptionReplicaPtf():
         self.cash -= cash_use
         self.asset_qty += trade_qty
 
-        self.timepoint += 1
+        self.reb_count += 1
         self.call_option.expire(self.step)
         self.record()
 
@@ -195,7 +199,7 @@ def main() -> None:
     callopt = CallOption(spot=100, strike=100, sigma=0.30, rf=0.03, mty=252)
     ptf = CallOptionReplicaPtf(
         cash=1e5, asset_er=0.073,
-        reb_times_per_day=1, call_option=callopt, rep_asset_qty=500)
+        reb_times_per_day=5, call_option=callopt, rep_asset_qty=500)
     ptf.simulate()
     df = ptf.export()
     writexlsx.write(df, "~/Downloads/test.xlsx", overwrite=True, open=True)
