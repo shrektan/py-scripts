@@ -2,7 +2,7 @@
 for call options with different hedging frequency
 """
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, asdict
 from math import sqrt, log, exp, isclose
 import scipy.stats
 import numpy as np
@@ -106,15 +106,7 @@ class AccountBook:
         self.asset_price.append(assetp)
 
     def export(self) -> pd.DataFrame:
-        out = pd.DataFrame({
-            "TimePoint": self.timepoint,
-            "AssetQty": self.asset_qty,
-            "AssetPrice": self.asset_price,
-            "Cash": self.cash,
-            "MV": self.mv,
-            "CallDelta": self.call_delta,
-            "CallPrice": self.call_price,
-        })
+        out = pd.DataFrame(asdict(self))
         return out
 
 
