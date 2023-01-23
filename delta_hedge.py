@@ -9,6 +9,8 @@ import numpy as np
 import pandas as pd
 import writexlsx
 
+TRADING_DAYS_PER_YEAR = 252
+
 
 def norm(x: float) -> float:
     return scipy.stats.norm.cdf(x)  # type: ignore
@@ -20,25 +22,30 @@ class CallOption:
     strike: float
     sigma: float
     rf: float
-    mty: float
+    mty_in_days: float
 
     def __post_int__(self) -> None:
-        if not isclose(self.mty, int(self.mty)):
+        if not isclose(self.mty_in_days, int(self.mty_in_days)):
             raise ValueError(
-                f"the option's init mty must be an integer, now it's {self.mty}")
+                f"the option's init mty must be an integer, now it's {self.mty_in_days}"
+            )
+
+    @property
+    def mty_in_years(self) -> float:
+        return self.mty_in_days / TRADING_DAYS_PER_YEAR
 
     @property
     def d1(self) -> float:
         if self.expired:
             return float("nan")
-        return 1.0 / (self.sigma * sqrt(self.mty)) * (
+        return 1.0 / (self.sigma * sqrt(self.mty_in_years)) * (
             log(self.spot / self.strike) +
-            (self.rf + self.sigma ** 2.0 / 2.0 * self.mty)
+            (self.rf + self.sigma ** 2.0 / 2.0 * self.mty_in_years)
         )
 
     @property
     def d2(self) -> float:
-        return self.d1 - self.sigma * sqrt(self.mty)
+        return self.d1 - self.sigma * sqrt(self.mty_in_years)
 
     @property
     def delta(self) -> float:
@@ -55,14 +62,14 @@ class CallOption:
         if self.expired:
             return self.payoff
         return norm(self.d1) * self.spot - \
-            norm(self.d2) * self.strike * exp(-self.rf * self.mty)
+            norm(self.d2) * self.strike * exp(-self.rf * self.mty_in_years)
 
     def expire(self, time: float) -> None:
-        self.mty -= time
+        self.mty_in_days -= time
 
     @property
     def expired(self) -> bool:
-        return self.mty <= 0.0
+        return self.mty_in_days <= 0.0
 
 
 @dataclass
@@ -73,10 +80,9 @@ class PriceTS():
 
 def price_ts(p0: float, er: float, evol: float,
              days: int, times_per_day: int) -> PriceTS:
-    trading_days_per_year = 252
     total_points = days * times_per_day
-    er_daily = er / trading_days_per_year
-    evol_daily = evol / sqrt(trading_days_per_year)
+    er_daily = er / TRADING_DAYS_PER_YEAR
+    evol_daily = evol / sqrt(TRADING_DAYS_PER_YEAR)
     rtn_daily = np.random.normal(er_daily, evol_daily, total_points)
     points0 = np.array(range(1, days + 1)) / times_per_day
     prices0 = p0 * np.cumprod(1 + rtn_daily)
@@ -142,7 +148,7 @@ class CallOptionReplicaPtf():
         return self.asset_prices.prices[self.reb_count]
 
     def __post_init__(self) -> None:
-        self.total_days = int(self.call_option.mty)
+        self.total_days = int(self.call_option.mty_in_days)
         self.total_steps = self.reb_times_per_day * self.total_days
         self.asset_p0 = self.call_option.spot
         self.asset_prices = price_ts(
@@ -164,16 +170,16 @@ class CallOptionReplicaPtf():
             self.rebalance()
 
     def rebalance(self) -> None:
+        self.reb_count += 1
         if self.expired:
             return None
+        self.call_option.spot = self.asset_price
+        self.call_option.expire(self.step)
         delta = self.call_option.delta
         trade_qty = delta * self.rep_asset_qty - self.asset_qty
         cash_use = trade_qty * self.asset_price
         self.cash -= cash_use
         self.asset_qty += trade_qty
-
-        self.reb_count += 1
-        self.call_option.expire(self.step)
         self.record()
 
     def record(self) -> None:
@@ -188,10 +194,11 @@ class CallOptionReplicaPtf():
 
 
 def main() -> None:
-    callopt = CallOption(spot=100, strike=100, sigma=0.30, rf=0.03, mty=252)
+    callopt = CallOption(spot=100, strike=100, sigma=0.25,
+                         rf=0.03, mty_in_days=252)
     ptf = CallOptionReplicaPtf(
         cash=1e5, asset_er=0.073,
-        reb_times_per_day=5, call_option=callopt, rep_asset_qty=500)
+        reb_times_per_day=1, call_option=callopt, rep_asset_qty=500)
     ptf.simulate()
     df = ptf.export()
     writexlsx.write(df, "~/Downloads/test.xlsx", overwrite=True, open=True)
