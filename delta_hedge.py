@@ -77,6 +77,15 @@ class PriceTS():
     points: np.ndarray
     prices: np.ndarray
 
+    def __post_init__(self) -> None:
+        if np.ndim(self.points) != 1 or np.ndim(self.prices) != 1:
+            raise ValueError("the dim of points and prices must be 1")
+        if np.shape(self.points) != np.shape(self.prices):
+            raise ValueError("points and prices must have the same length")
+
+    def __len__(self) -> int:
+        return len(self.points)
+
 
 def price_ts(p0: float, er: float, evol: float,
              days: int, times_per_day: int) -> PriceTS:
