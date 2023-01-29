@@ -91,9 +91,9 @@ def price_ts(p0: float, er: float, evol: float,
     total_points = days * times_per_day
     er_daily = er / TRADING_DAYS_PER_YEAR / times_per_day
     evol_daily = evol / sqrt(TRADING_DAYS_PER_YEAR * times_per_day)
-    rtn_daily = np.random.normal(er_daily, evol_daily, total_points)
+    rtn_daily = np.random.lognormal(er_daily, evol_daily, total_points)
     points0 = np.array(range(1, total_points + 1)) / times_per_day
-    prices0 = p0 * np.cumprod(1 + rtn_daily)
+    prices0 = p0 * np.exp(np.cumsum(rtn_daily - 1))
     points = np.insert(points0, 0, 0.0)
     prices = np.insert(prices0, 0, p0)
     return PriceTS(points=list(points), prices=list(prices))
