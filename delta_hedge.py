@@ -255,8 +255,8 @@ def main() -> None:
         help="the volatility of the underlying asset (default 0.30)"
     )
     parser.add_argument(
-        "--rf", type=float, default=0.03,
-        help="the risk free rate (default 0.03)"
+        "--rf", type=float, default=0.00,
+        help="the risk free rate (default 0.00)"
     )
     parser.add_argument(
         "--mty", type=int, default=252,
