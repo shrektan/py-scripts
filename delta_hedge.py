@@ -134,9 +134,14 @@ class AccountBook:
         return len(self.timepoint)
 
     @property
-    def mv_stat(self) -> tuple[float, float, float]:
+    def mv_stat(self) -> dict[str, float]:
         n = len(self)
-        return (self.mv[n-1], self.call_mv[n-1], self.mv[n-1] - self.call_mv[n-1])
+        return {
+            "mv": self.mv[n-1],
+            "call_mv": self.call_mv[n-1],
+            "abs_diff": self.mv[n-1] - self.call_mv[n-1],
+            "rel_diff": self.mv[n-1] / self.call_mv[n-1] - 1.0
+        }
 
 
 @dataclass
@@ -303,7 +308,7 @@ def main() -> None:
         while n > 0:
             out.append(run_once(opt).booking.mv_stat)
             n -= 1
-        return pd.DataFrame(out, columns=["mv", "call_mv", "diff"])
+        return pd.DataFrame(out)
 
     if opt.stat is None:
         df = run_once(opt).export()
