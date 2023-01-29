@@ -92,7 +92,7 @@ def price_ts(p0: float, er: float, evol: float,
     er_daily = er / TRADING_DAYS_PER_YEAR
     evol_daily = evol / sqrt(TRADING_DAYS_PER_YEAR)
     rtn_daily = np.random.normal(er_daily, evol_daily, total_points)
-    points0 = np.array(range(1, days + 1)) / times_per_day
+    points0 = np.array(range(1, total_points + 1)) / times_per_day
     prices0 = p0 * np.cumprod(1 + rtn_daily)
     points = np.insert(points0, 0, 0.0)
     prices = np.insert(prices0, 0, p0)
@@ -108,9 +108,13 @@ class AccountBook:
     mv: list[float] = field(init=False, default_factory=list)
     call_delta: list[float] = field(init=False, default_factory=list)
     call_price: list[float] = field(init=False, default_factory=list)
+    call_qty: list[float] = field(init=False, default_factory=list)
+    call_cash: list[float] = field(init=False, default_factory=list)
+    call_mv: list[float] = field(init=False, default_factory=list)
 
     def add(self, t: float, q: float, cash: float, assetp: float,
-            mv: float, delta: float, callp: float) -> None:
+            mv: float, delta: float, callp: float,
+            call_qty: float, call_cash: float, call_mv: float) -> None:
         self.timepoint.append(t)
         self.asset_qty.append(q)
         self.cash.append(cash)
@@ -118,10 +122,21 @@ class AccountBook:
         self.call_delta.append(delta)
         self.call_price.append(callp)
         self.asset_price.append(assetp)
+        self.call_qty.append(call_qty)
+        self.call_cash.append(call_cash)
+        self.call_mv.append(call_mv)
 
     def export(self) -> pd.DataFrame:
         out = pd.DataFrame(asdict(self))
         return out
+
+    def __len__(self) -> int:
+        return len(self.timepoint)
+
+    @property
+    def mv_stat(self) -> tuple[float, float, float]:
+        n = len(self)
+        return (self.mv[n-1], self.call_mv[n-1], self.mv[n-1] - self.call_mv[n-1])
 
 
 @dataclass
@@ -129,7 +144,7 @@ class CallOptionReplicaPtf():
     cash: float
     reb_times_per_day: int
     call_option: CallOption
-    rep_asset_qty: float
+    target_qty: float
     asset_er: float
     asset_p0: float = field(init=False)
     total_days: int = field(init=False)
@@ -138,6 +153,8 @@ class CallOptionReplicaPtf():
     asset_qty: float = field(init=False, default=0)
     reb_count: int = field(init=False, default=0)
     booking: AccountBook = field(init=False, default_factory=AccountBook)
+    call_qty: float = field(init=False, default=0.0)
+    call_cash: float = field(init=False)
 
     @property
     def step(self) -> float:
@@ -163,11 +180,16 @@ class CallOptionReplicaPtf():
             p0=self.asset_p0, er=self.asset_er, evol=self.call_option.sigma,
             days=self.total_days, times_per_day=self.reb_times_per_day
         )
+        self.call_cash = self.cash
         self.record()
 
     @property
     def mv(self) -> float:
         return self.asset_qty * self.asset_price + self.cash
+
+    @property
+    def call_mv(self) -> float:
+        return self.call_qty * self.call_option.price + self.call_cash
 
     @property
     def expired(self) -> bool:
@@ -183,8 +205,12 @@ class CallOptionReplicaPtf():
             return None
         self.call_option.spot = self.asset_price
         self.call_option.expire(self.step)
+        # at the first EOP, it buys call then stay
+        if self.reb_count == 1:
+            self.call_qty = self.target_qty
+            self.call_cash = self.cash - self.call_qty * self.call_option.price
         delta = self.call_option.delta
-        trade_qty = delta * self.rep_asset_qty - self.asset_qty
+        trade_qty = delta * self.target_qty - self.asset_qty
         cash_use = trade_qty * self.asset_price
         self.cash -= cash_use
         self.asset_qty += trade_qty
@@ -194,7 +220,8 @@ class CallOptionReplicaPtf():
         self.booking.add(
             t=self.timepoint, q=self.asset_qty, assetp=self.asset_price,
             cash=self.cash, mv=self.mv,
-            delta=self.call_option.delta, callp=self.call_option.price
+            delta=self.call_option.delta, callp=self.call_option.price,
+            call_qty=self.call_qty, call_cash=self.call_cash, call_mv=self.call_mv
         )
 
     def export(self) -> pd.DataFrame:
@@ -251,18 +278,38 @@ def main() -> None:
         "--qty", type=int, default=100.0,
         help="the target quantity of the call option (default 100.0)"
     )
+    parser.add_argument(
+        "--stat", type=int,
+        help="the simulation times, when set, it returns the final mv info. "
+        "otherwise, returns the detail of the single run"
+    )
     opt = parser.parse_args()
     if opt.seed is not None:
         np.random.seed(opt.seed)
-    callopt = CallOption(
-        spot=opt.spot, strike=opt.strike, sigma=opt.sigma,
-        rf=opt.rf, mty_in_days=opt.mty)
-    ptf = CallOptionReplicaPtf(
-        cash=opt.cash, asset_er=opt.er,
-        reb_times_per_day=opt.freq,
-        call_option=callopt, rep_asset_qty=opt.qty)
-    ptf.simulate()
-    df = ptf.export()
+
+    def run_once(opt):
+        callopt = CallOption(
+            spot=opt.spot, strike=opt.strike, sigma=opt.sigma,
+            rf=opt.rf, mty_in_days=opt.mty)
+        ptf = CallOptionReplicaPtf(
+            cash=opt.cash, asset_er=opt.er,
+            reb_times_per_day=opt.freq,
+            call_option=callopt, target_qty=opt.qty)
+        ptf.simulate()
+        return ptf
+
+    def run_mult(opt, n):
+        out = []
+        while n > 0:
+            out.append(run_once(opt).booking.mv_stat)
+            n -= 1
+        return pd.DataFrame(out, columns=["mv", "call_mv", "diff"])
+
+    if opt.stat is None:
+        df = run_once(opt).export()
+    else:
+        df = run_mult(opt, opt.stat)
+
     writexlsx.write(df, opt.excel, overwrite=opt.overwrite, open=opt.open)
 
 
