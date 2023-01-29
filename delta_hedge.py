@@ -4,6 +4,7 @@ for call options with different hedging frequency
 
 from dataclasses import dataclass, field, asdict
 from math import sqrt, log, exp, isclose
+import argparse
 import scipy.stats
 import numpy as np
 import pandas as pd
@@ -201,14 +202,62 @@ class CallOptionReplicaPtf():
 
 
 def main() -> None:
-    callopt = CallOption(spot=100, strike=100, sigma=0.25,
-                         rf=0.03, mty_in_days=252)
+    parser = argparse.ArgumentParser(
+        description="Simulate Call Option using ETFs via delta hedging")
+    parser.add_argument("excel", type=str, help="the output excel path")
+    parser.add_argument(
+        "--overwrite", help="overwrite the excel if it exists",
+        action="store_true", default=False)
+    parser.add_argument(
+        "-o", "--open", help="open the output excel file when job is over",
+        action="store_true", default=False)
+    parser.add_argument(
+        "--spot", type=float, default=100.0,
+        help="the init spot price of the underlying asset (default 100.0)"
+    )
+    parser.add_argument(
+        "--strike", type=float, default=100.0,
+        help="the strike price of the call option (default 100.0)"
+    )
+    parser.add_argument(
+        "--sigma", type=float, default=0.30,
+        help="the volatility of the underlying asset (default 0.30)"
+    )
+    parser.add_argument(
+        "--rf", type=float, default=0.03,
+        help="the risk free rate (default 0.03)"
+    )
+    parser.add_argument(
+        "--mty", type=int, default=252,
+        help="the call option's maturity days (default 252)"
+    )
+    parser.add_argument(
+        "--cash", type=float, default=10_000.0,
+        help="the init cash in the portfolio (default 10000)"
+    )
+    parser.add_argument(
+        "--er", type=float, default=0.10,
+        help="the expected return of the underlying asset (default 0.10)"
+    )
+    parser.add_argument(
+        "--freq", type=int, default=1,
+        help="the rebalance frequency per day (default 1)"
+    )
+    parser.add_argument(
+        "--qty", type=int, default=100.0,
+        help="the target quantity of the call option (default 100.0)"
+    )
+    opt = parser.parse_args()
+    callopt = CallOption(
+        spot=opt.spot, strike=opt.strike, sigma=opt.sigma,
+        rf=opt.rf, mty_in_days=opt.mty)
     ptf = CallOptionReplicaPtf(
-        cash=1e5, asset_er=0.073,
-        reb_times_per_day=1, call_option=callopt, rep_asset_qty=500)
+        cash=opt.cash, asset_er=opt.er,
+        reb_times_per_day=opt.freq,
+        call_option=callopt, rep_asset_qty=opt.qty)
     ptf.simulate()
     df = ptf.export()
-    writexlsx.write(df, "~/Downloads/test.xlsx", overwrite=True, open=True)
+    writexlsx.write(df, opt.excel, overwrite=opt.overwrite, open=opt.open)
 
 
 if __name__ == "__main__":
