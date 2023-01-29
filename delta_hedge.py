@@ -74,13 +74,11 @@ class CallOption:
 
 @dataclass
 class PriceTS():
-    points: np.ndarray
-    prices: np.ndarray
+    points: list[float]
+    prices: list[float]
 
     def __post_init__(self) -> None:
-        if np.ndim(self.points) != 1 or np.ndim(self.prices) != 1:
-            raise ValueError("the dim of points and prices must be 1")
-        if np.shape(self.points) != np.shape(self.prices):
+        if len(self.points) != len(self.prices):
             raise ValueError("points and prices must have the same length")
 
     def __len__(self) -> int:
@@ -97,7 +95,7 @@ def price_ts(p0: float, er: float, evol: float,
     prices0 = p0 * np.cumprod(1 + rtn_daily)
     points = np.insert(points0, 0, 0.0)
     prices = np.insert(prices0, 0, p0)
-    return PriceTS(points=points, prices=prices)
+    return PriceTS(points=list(points), prices=list(prices))
 
 
 @dataclass
