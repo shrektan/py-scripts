@@ -210,6 +210,10 @@ class CallOptionReplicaPtf():
             return None
         self.call_option.spot = self.asset_price
         self.call_option.expire(self.step)
+        # add risk free interest (this is a must or the result would be biased
+        # to the risk free rate, as it's reflected in the option price)
+        self.cash *= 1.0 + self.call_option.rf / TRADING_DAYS_PER_YEAR * self.step
+        self.call_cash *= 1.0 + self.call_option.rf / TRADING_DAYS_PER_YEAR * self.step
         # at the first EOP, it buys call then stay
         if self.reb_count == 1:
             self.call_qty = self.target_qty
