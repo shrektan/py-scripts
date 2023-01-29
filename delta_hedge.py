@@ -212,6 +212,10 @@ def main() -> None:
         "-o", "--open", help="open the output excel file when job is over",
         action="store_true", default=False)
     parser.add_argument(
+        "--seed", type=int,
+        help="the numpy's random generater seed"
+    )
+    parser.add_argument(
         "--spot", type=float, default=100.0,
         help="the init spot price of the underlying asset (default 100.0)"
     )
@@ -248,6 +252,8 @@ def main() -> None:
         help="the target quantity of the call option (default 100.0)"
     )
     opt = parser.parse_args()
+    if opt.seed is not None:
+        np.random.seed(opt.seed)
     callopt = CallOption(
         spot=opt.spot, strike=opt.strike, sigma=opt.sigma,
         rf=opt.rf, mty_in_days=opt.mty)
