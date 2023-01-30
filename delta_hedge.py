@@ -116,21 +116,21 @@ class AccountBook:
     timepoint: list[float] = field(init=False, default_factory=list)
     asset_qty: list[float] = field(init=False, default_factory=list)
     asset_price: list[float] = field(init=False, default_factory=list)
-    cash: list[float] = field(init=False, default_factory=list)
-    mv: list[float] = field(init=False, default_factory=list)
+    asset_cash: list[float] = field(init=False, default_factory=list)
+    asset_mv: list[float] = field(init=False, default_factory=list)
     call_delta: list[float] = field(init=False, default_factory=list)
     call_price: list[float] = field(init=False, default_factory=list)
     call_qty: list[float] = field(init=False, default_factory=list)
     call_cash: list[float] = field(init=False, default_factory=list)
     call_mv: list[float] = field(init=False, default_factory=list)
 
-    def add(self, t: float, q: float, cash: float, assetp: float,
-            mv: float, delta: float, callp: float,
+    def add(self, t: float, asset_qty: float, asset_cash: float, assetp: float,
+            asset_mv: float, delta: float, callp: float,
             call_qty: float, call_cash: float, call_mv: float) -> None:
         self.timepoint.append(t)
-        self.asset_qty.append(q)
-        self.cash.append(cash)
-        self.mv.append(mv)
+        self.asset_qty.append(asset_qty)
+        self.asset_cash.append(asset_cash)
+        self.asset_mv.append(asset_mv)
         self.call_delta.append(delta)
         self.call_price.append(callp)
         self.asset_price.append(assetp)
@@ -149,29 +149,49 @@ class AccountBook:
     def mv_stat(self) -> dict[str, float]:
         n = len(self)
         return {
-            "mv": self.mv[n-1],
+            "asset_mv": self.asset_mv[n-1],
             "call_mv": self.call_mv[n-1],
-            "abs_diff": self.mv[n-1] - self.call_mv[n-1],
-            "rel_diff": self.mv[n-1] / self.call_mv[n-1] - 1.0
+            "abs_diff": self.asset_mv[n-1] - self.call_mv[n-1],
+            "rel_diff": self.asset_mv[n-1] / self.call_mv[n-1] - 1.0
         }
 
 
 @dataclass
-class CallOptionReplicaPtf():
+class Portfolio:
     cash: float
+    qty: float
+    price: float
+
+    @property
+    def mv(self) -> float:
+        return self.qty * self.price + self.cash
+
+
+@dataclass
+class Portfolios:
+    asset: Portfolio
+    call: Portfolio
+
+
+@dataclass(frozen=True)
+class InitValue:
+    cash: float
+    tgt_qty: float
+    price: float
+    er: float
+
+
+@dataclass
+class CallOptionReplicaPtf:
     reb_times_per_day: int
     call_option: CallOption
-    target_qty: float
-    asset_er: float
-    asset_p0: float = field(init=False)
+    init: InitValue
     total_days: int = field(init=False)
     total_steps: int = field(init=False)
     asset_prices: PriceTS = field(init=False)
-    asset_qty: float = field(init=False, default=0)
     reb_count: int = field(init=False, default=0)
+    ptfs: Portfolios = field(init=False)
     booking: AccountBook = field(init=False, default_factory=AccountBook)
-    call_qty: float = field(init=False, default=0.0)
-    call_cash: float = field(init=False)
 
     @property
     def step(self) -> float:
@@ -192,21 +212,17 @@ class CallOptionReplicaPtf():
     def __post_init__(self) -> None:
         self.total_days = int(self.call_option.mty_in_days)
         self.total_steps = self.reb_times_per_day * self.total_days
-        self.asset_p0 = self.call_option.spot
         self.asset_prices = price_ts(
-            p0=self.asset_p0, er=self.asset_er, evol=self.call_option.sigma,
+            p0=self.init.price, er=self.init.er, evol=self.call_option.sigma,
             days=self.total_days, times_per_day=self.reb_times_per_day
         )
-        self.call_cash = self.cash
+        self.ptfs = Portfolios(
+            asset=Portfolio(
+                cash=self.init.cash, qty=0, price=self.init.price),
+            call=Portfolio(
+                cash=self.init.cash, qty=0, price=self.call_option.price)
+        )
         self.record()
-
-    @property
-    def mv(self) -> float:
-        return self.asset_qty * self.asset_price + self.cash
-
-    @property
-    def call_mv(self) -> float:
-        return self.call_qty * self.call_option.price + self.call_cash
 
     @property
     def expired(self) -> bool:
@@ -224,25 +240,42 @@ class CallOptionReplicaPtf():
         self.call_option.expire(self.step)
         # add risk free interest (this is a must or the result would be biased
         # to the risk free rate, as it's reflected in the option price)
-        self.cash *= 1.0 + self.call_option.rf / TRADING_DAYS_PER_YEAR * self.step
-        self.call_cash *= 1.0 + self.call_option.rf / TRADING_DAYS_PER_YEAR * self.step
-        # at the first EOP, it buys call then stay
+        self.ptfs.asset.cash *=\
+            1.0 + self.call_option.rf / TRADING_DAYS_PER_YEAR * self.step
+        self.ptfs.call.cash *=\
+            1.0 + self.call_option.rf / TRADING_DAYS_PER_YEAR * self.step
+
+        # rebalance call ptf
         if self.reb_count == 1:
-            self.call_qty = self.target_qty
-            self.call_cash = self.cash - self.call_qty * self.call_option.price
+            # at the first EOP, it buys call then stay
+            self.ptfs.call.qty = self.init.tgt_qty
+            self.ptfs.call.cash = self.ptfs.call.cash - \
+                self.ptfs.call.qty * self.call_option.price
+        self.ptfs.call.price = self.call_option.price
+
+        # rebalance asset ptf
         delta = self.call_option.delta
-        trade_qty = delta * self.target_qty - self.asset_qty
+        trade_qty = delta * self.init.tgt_qty - self.ptfs.asset.qty
         cash_use = trade_qty * self.asset_price
-        self.cash -= cash_use
-        self.asset_qty += trade_qty
+        self.ptfs.asset.cash -= cash_use
+        self.ptfs.asset.qty += trade_qty
+        self.ptfs.asset.price = self.asset_price
+
+        # record
         self.record()
 
     def record(self) -> None:
         self.booking.add(
-            t=self.timepoint, q=self.asset_qty, assetp=self.asset_price,
-            cash=self.cash, mv=self.mv,
-            delta=self.call_option.delta, callp=self.call_option.price,
-            call_qty=self.call_qty, call_cash=self.call_cash, call_mv=self.call_mv
+            t=self.timepoint,
+            asset_qty=self.ptfs.asset.qty,
+            assetp=self.asset_price,
+            asset_cash=self.ptfs.asset.cash,
+            asset_mv=self.ptfs.asset.mv,
+            delta=self.call_option.delta,
+            callp=self.call_option.price,
+            call_qty=self.ptfs.call.qty,
+            call_cash=self.ptfs.call.cash,
+            call_mv=self.ptfs.call.mv
         )
 
     def export(self) -> pd.DataFrame:
@@ -313,9 +346,10 @@ def main() -> None:
             spot=opt.spot, strike=opt.strike, sigma=opt.sigma,
             rf=opt.rf, mty_in_days=opt.mty)
         ptf = CallOptionReplicaPtf(
-            cash=opt.cash, asset_er=opt.er,
             reb_times_per_day=opt.freq,
-            call_option=callopt, target_qty=opt.qty)
+            init=InitValue(
+                cash=opt.cash, tgt_qty=opt.qty, price=opt.spot, er=opt.er),
+            call_option=callopt)
         ptf.simulate()
         return ptf
 
