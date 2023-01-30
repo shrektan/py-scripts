@@ -1,6 +1,12 @@
 """Demonstrate the effectiveness of delta hedging
 for call options with different hedging frequency
 
+Usage
+---
+```ipython
+%run delta_hedge.py ~/Downloads/test0.xlsx --overwrite -o --stat 100 --seed 0 --freq 1
+```
+
 TODO
 ---
 - allow real index price, etf prices being provided, and
