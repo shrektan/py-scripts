@@ -1,5 +1,11 @@
 """Demonstrate the effectiveness of delta hedging
 for call options with different hedging frequency
+
+TODO
+---
+- allow real index price, etf prices being provided, and
+  be able to bootstrap random prices from the real price
+  time series
 """
 
 from dataclasses import dataclass, field, asdict
