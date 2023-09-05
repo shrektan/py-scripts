@@ -86,8 +86,11 @@ def main() -> None:
 
     outfile = opt.outfile
     total_page = opt.pages
+    if total_page is None:
+        raise ValueError("`pages` param is not provided")
     if total_page < 1:
-        raise ValueError(f"The {total_page=} must be positive integer!")
+        raise ValueError(
+            f"`pages` parameter must be positive integer (now is {total_page})!")
 
     out: list[pd.DataFrame] = []
     for i in range(1, total_page):
