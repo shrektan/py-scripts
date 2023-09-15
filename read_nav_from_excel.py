@@ -145,7 +145,7 @@ def main() -> None:
         "among the range `0:date_rgs[0], date_rgs[1]` cells")
     parser.add_argument(
         '-nav_nms', type=str, default="('(今日|基金)单位净值', '累计单位净值')",
-        help="the nav field names, require 2 names, must be in the for of (str, str), "
+        help="the nav field names, require 2 names, must be in the format of (str, str), "
         "which represents the unit nav and accumulative nav row names, respectively")
     parser.add_argument(
         '-s', "--sheet", type=int, help="the sheet name of the nav table", default=0)
