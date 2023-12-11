@@ -208,3 +208,4 @@ po/*~
 
 # RStudio Connect folder
 rsconnect/
+example.db
