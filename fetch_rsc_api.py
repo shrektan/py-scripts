@@ -21,12 +21,10 @@ def read_db(con: str, sql: str) -> pd.DataFrame:
         "accept": "application/json",
         "Authorization": f"Key {key}",
     }
-    data: dict[str, str] = {
-        "con": con,
-        "sql": sql
-    }
+    data: dict[str, str] = {"con": con, "sql": sql}
     ret: requests.Response = requests.post(
-        url=url, data=data, headers=headers, timeout=10)
+        url=url, data=data, headers=headers, timeout=10
+    )
     if ret.status_code == 200:
         out = pd.DataFrame(json.loads(ret.text))
         return out

@@ -14,12 +14,14 @@ TODO
   time series
 """
 
-from dataclasses import dataclass, field, asdict
-from math import sqrt, log, exp, isclose
 import argparse
-import scipy.stats
+from dataclasses import asdict, dataclass, field
+from math import exp, isclose, log, sqrt
+
 import numpy as np
 import pandas as pd
+import scipy.stats
+
 import writexlsx
 
 TRADING_DAYS_PER_YEAR = 252
@@ -51,9 +53,13 @@ class CallOption:
     def d1(self) -> float:
         if self.expired:
             return float("nan")
-        return 1.0 / (self.sigma * sqrt(self.mty_in_years)) * (
-            log(self.spot / self.strike) +
-            (self.rf + self.sigma ** 2.0 / 2.0 * self.mty_in_years)
+        return (
+            1.0
+            / (self.sigma * sqrt(self.mty_in_years))
+            * (
+                log(self.spot / self.strike)
+                + (self.rf + self.sigma**2.0 / 2.0 * self.mty_in_years)
+            )
         )
 
     @property
@@ -74,8 +80,9 @@ class CallOption:
     def price(self) -> float:
         if self.expired:
             return self.payoff
-        return norm(self.d1) * self.spot - \
-            norm(self.d2) * self.strike * exp(-self.rf * self.mty_in_years)
+        return norm(self.d1) * self.spot - norm(self.d2) * self.strike * exp(
+            -self.rf * self.mty_in_years
+        )
 
     def expire(self, time: float) -> None:
         self.mty_in_days -= time
@@ -86,7 +93,7 @@ class CallOption:
 
 
 @dataclass
-class PriceTS():
+class PriceTS:
     points: list[float]
     prices: list[float]
 
@@ -98,8 +105,9 @@ class PriceTS():
         return len(self.points)
 
 
-def price_ts(p0: float, er: float, evol: float,
-             days: int, times_per_day: int) -> PriceTS:
+def price_ts(
+    p0: float, er: float, evol: float, days: int, times_per_day: int
+) -> PriceTS:
     total_points = days * times_per_day
     er_daily = er / TRADING_DAYS_PER_YEAR / times_per_day
     evol_daily = evol / sqrt(TRADING_DAYS_PER_YEAR * times_per_day)
@@ -124,9 +132,19 @@ class AccountBook:
     call_cash: list[float] = field(init=False, default_factory=list)
     call_mv: list[float] = field(init=False, default_factory=list)
 
-    def add(self, t: float, asset_qty: float, asset_cash: float, assetp: float,
-            asset_mv: float, delta: float, callp: float,
-            call_qty: float, call_cash: float, call_mv: float) -> None:
+    def add(
+        self,
+        t: float,
+        asset_qty: float,
+        asset_cash: float,
+        assetp: float,
+        asset_mv: float,
+        delta: float,
+        callp: float,
+        call_qty: float,
+        call_cash: float,
+        call_mv: float,
+    ) -> None:
         self.timepoint.append(t)
         self.asset_qty.append(asset_qty)
         self.asset_cash.append(asset_cash)
@@ -149,10 +167,10 @@ class AccountBook:
     def mv_stat(self) -> dict[str, float]:
         n = len(self)
         return {
-            "asset_mv": self.asset_mv[n-1],
-            "call_mv": self.call_mv[n-1],
-            "abs_diff": self.asset_mv[n-1] - self.call_mv[n-1],
-            "rel_diff": self.asset_mv[n-1] / self.call_mv[n-1] - 1.0
+            "asset_mv": self.asset_mv[n - 1],
+            "call_mv": self.call_mv[n - 1],
+            "abs_diff": self.asset_mv[n - 1] - self.call_mv[n - 1],
+            "rel_diff": self.asset_mv[n - 1] / self.call_mv[n - 1] - 1.0,
         }
 
 
@@ -213,14 +231,15 @@ class CallOptionReplicaPtf:
         self.total_days = int(self.call_option.mty_in_days)
         self.total_steps = self.reb_times_per_day * self.total_days
         self.asset_prices = price_ts(
-            p0=self.init.price, er=self.init.er, evol=self.call_option.sigma,
-            days=self.total_days, times_per_day=self.reb_times_per_day
+            p0=self.init.price,
+            er=self.init.er,
+            evol=self.call_option.sigma,
+            days=self.total_days,
+            times_per_day=self.reb_times_per_day,
         )
         self.ptfs = Portfolios(
-            asset=Portfolio(
-                cash=self.init.cash, qty=0, price=self.init.price),
-            call=Portfolio(
-                cash=self.init.cash, qty=0, price=self.call_option.price)
+            asset=Portfolio(cash=self.init.cash, qty=0, price=self.init.price),
+            call=Portfolio(cash=self.init.cash, qty=0, price=self.call_option.price),
         )
         self.record()
 
@@ -240,17 +259,20 @@ class CallOptionReplicaPtf:
         self.call_option.expire(self.step)
         # add risk free interest (this is a must or the result would be biased
         # to the risk free rate, as it's reflected in the option price)
-        self.ptfs.asset.cash *=\
+        self.ptfs.asset.cash *= (
             1.0 + self.call_option.rf / TRADING_DAYS_PER_YEAR * self.step
-        self.ptfs.call.cash *=\
+        )
+        self.ptfs.call.cash *= (
             1.0 + self.call_option.rf / TRADING_DAYS_PER_YEAR * self.step
+        )
 
         # rebalance call ptf
         if self.reb_count == 1:
             # at the first EOP, it buys call then stay
             self.ptfs.call.qty = self.init.tgt_qty
-            self.ptfs.call.cash = self.ptfs.call.cash - \
-                self.ptfs.call.qty * self.call_option.price
+            self.ptfs.call.cash = (
+                self.ptfs.call.cash - self.ptfs.call.qty * self.call_option.price
+            )
         self.ptfs.call.price = self.call_option.price
 
         # rebalance asset ptf
@@ -275,7 +297,7 @@ class CallOptionReplicaPtf:
             callp=self.call_option.price,
             call_qty=self.ptfs.call.qty,
             call_cash=self.ptfs.call.cash,
-            call_mv=self.ptfs.call.mv
+            call_mv=self.ptfs.call.mv,
         )
 
     def export(self) -> pd.DataFrame:
@@ -284,58 +306,79 @@ class CallOptionReplicaPtf:
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Simulate Call Option using ETFs via delta hedging")
+        description="Simulate Call Option using ETFs via delta hedging"
+    )
     parser.add_argument("excel", type=str, help="the output excel path")
     parser.add_argument(
-        "--overwrite", help="overwrite the excel if it exists",
-        action="store_true", default=False)
-    parser.add_argument(
-        "-o", "--open", help="open the output excel file when job is over",
-        action="store_true", default=False)
-    parser.add_argument(
-        "--seed", type=int,
-        help="the numpy's random generater seed"
+        "--overwrite",
+        help="overwrite the excel if it exists",
+        action="store_true",
+        default=False,
     )
     parser.add_argument(
-        "--spot", type=float, default=100.0,
-        help="the init spot price of the underlying asset (default 100.0)"
+        "-o",
+        "--open",
+        help="open the output excel file when job is over",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument("--seed", type=int, help="the numpy's random generater seed")
+    parser.add_argument(
+        "--spot",
+        type=float,
+        default=100.0,
+        help="the init spot price of the underlying asset (default 100.0)",
     )
     parser.add_argument(
-        "--strike", type=float, default=100.0,
-        help="the strike price of the call option (default 100.0)"
+        "--strike",
+        type=float,
+        default=100.0,
+        help="the strike price of the call option (default 100.0)",
     )
     parser.add_argument(
-        "--sigma", type=float, default=0.30,
-        help="the volatility of the underlying asset (default 0.30)"
+        "--sigma",
+        type=float,
+        default=0.30,
+        help="the volatility of the underlying asset (default 0.30)",
     )
     parser.add_argument(
-        "--rf", type=float, default=0.00,
-        help="the risk free rate (default 0.00)"
+        "--rf", type=float, default=0.00, help="the risk free rate (default 0.00)"
     )
     parser.add_argument(
-        "--mty", type=int, default=252,
-        help="the call option's maturity days (default 252)"
+        "--mty",
+        type=int,
+        default=252,
+        help="the call option's maturity days (default 252)",
     )
     parser.add_argument(
-        "--cash", type=float, default=10_000.0,
-        help="the init cash in the portfolio (default 10000)"
+        "--cash",
+        type=float,
+        default=10_000.0,
+        help="the init cash in the portfolio (default 10000)",
     )
     parser.add_argument(
-        "--er", type=float, default=0.10,
-        help="the expected return of the underlying asset (default 0.10)"
+        "--er",
+        type=float,
+        default=0.10,
+        help="the expected return of the underlying asset (default 0.10)",
     )
     parser.add_argument(
-        "--freq", type=int, default=1,
-        help="the rebalance frequency per day (default 1)"
+        "--freq",
+        type=int,
+        default=1,
+        help="the rebalance frequency per day (default 1)",
     )
     parser.add_argument(
-        "--qty", type=int, default=100.0,
-        help="the target quantity of the call option (default 100.0)"
+        "--qty",
+        type=int,
+        default=100.0,
+        help="the target quantity of the call option (default 100.0)",
     )
     parser.add_argument(
-        "--stat", type=int,
+        "--stat",
+        type=int,
         help="the simulation times, when set, it returns the final mv info. "
-        "otherwise, returns the detail of the single run"
+        "otherwise, returns the detail of the single run",
     )
     opt = parser.parse_args()
     if opt.seed is not None:
@@ -343,13 +386,17 @@ def main() -> None:
 
     def run_once(opt):
         callopt = CallOption(
-            spot=opt.spot, strike=opt.strike, sigma=opt.sigma,
-            rf=opt.rf, mty_in_days=opt.mty)
+            spot=opt.spot,
+            strike=opt.strike,
+            sigma=opt.sigma,
+            rf=opt.rf,
+            mty_in_days=opt.mty,
+        )
         ptf = CallOptionReplicaPtf(
             reb_times_per_day=opt.freq,
-            init=InitValue(
-                cash=opt.cash, tgt_qty=opt.qty, price=opt.spot, er=opt.er),
-            call_option=callopt)
+            init=InitValue(cash=opt.cash, tgt_qty=opt.qty, price=opt.spot, er=opt.er),
+            call_option=callopt,
+        )
         ptf.simulate()
         return ptf
 

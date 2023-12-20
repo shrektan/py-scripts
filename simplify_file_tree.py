@@ -33,13 +33,20 @@ def simplify(tgt: str, rm_empty_folder: bool):
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-k', '--keepsubfolder', action='store_true', default=False,
-        help="Keep the empty subfolder")
+        "-k",
+        "--keepsubfolder",
+        action="store_true",
+        default=False,
+        help="Keep the empty subfolder",
+    )
     parser.add_argument(
-        '-o', '--open', action='store_true', default=False,
-        help="Open the folder when finished")
-    parser.add_argument(
-        'target', help="The folder to be simplified")
+        "-o",
+        "--open",
+        action="store_true",
+        default=False,
+        help="Open the folder when finished",
+    )
+    parser.add_argument("target", help="The folder to be simplified")
     options = parser.parse_args()
     target = options.target
     if len(target) == 0 or pathlib.Path(target).is_dir() is False:

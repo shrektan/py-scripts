@@ -23,8 +23,9 @@ def read_tbl(page: int) -> pd.DataFrame | None:
     Returns:
         list: each element contains a 5-length row data
     """
-    url: str = "https://www.zhongbaodeng.com/channel/"\
-        "350b43d4af88460b93ccd46658cf631e.html"
+    url: str = (
+        "https://www.zhongbaodeng.com/channel/" "350b43d4af88460b93ccd46658cf631e.html"
+    )
     params = {
         "isChannel": "",
         "isSelect": "",
@@ -36,9 +37,9 @@ def read_tbl(page: int) -> pd.DataFrame | None:
     }
     rsp: requests.Response = requests.post(url=url, params=params, timeout=10)
     soup = bs4.BeautifulSoup(rsp.text, "lxml")
-    tbl = soup.find('div', attrs={
-        "class": "product_content_content product_content_content1"
-    })
+    tbl = soup.find(
+        "div", attrs={"class": "product_content_content product_content_content1"}
+    )
     if isinstance(tbl, bs4.element.Tag):
         lis = tbl.find_all("li")
     else:
@@ -46,38 +47,51 @@ def read_tbl(page: int) -> pd.DataFrame | None:
     out = []
     for ele in lis:
         ele = ele.find_all("div")
-        out.append([
-            ele[0].text.strip(),
-            ele[1].text.strip(),
-            ele[2].text.strip(),
-            ele[3].text.strip(),
-            ele[4].text.strip()
-        ])
+        out.append(
+            [
+                ele[0].text.strip(),
+                ele[1].text.strip(),
+                ele[2].text.strip(),
+                ele[3].text.strip(),
+                ele[4].text.strip(),
+            ]
+        )
     cols: list[str] = ["序号", "产品管理人", "产品登记编码", "产品全称", "登记时间"]
     return pd.DataFrame(out, columns=cols)
 
 
 def main() -> None:
-    zbdurl = ("https://www.zhongbaodeng.com/channel/"
-              "350b43d4af88460b93ccd46658cf631e.html")
+    zbdurl = (
+        "https://www.zhongbaodeng.com/channel/" "350b43d4af88460b93ccd46658cf631e.html"
+    )
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-p', '--pages', type=int,
+        "-p",
+        "--pages",
+        type=int,
         help="the total pages to be downloaded (check the website by yourself), "
-        "must be positive.")
-    parser.add_argument(
-        '-o', '--open', action='store_true', default=False,
-        help="open the excel file when finished")
-    parser.add_argument(
-        "--overwrite", help="overwrite the `toexcel` if exists",
-        action="store_true", default=False)
-    parser.add_argument(
-        "--openzbd", action="store_true", default=False,
-        help="open the 中保登组合类产品登记网页: "
-        f"{zbdurl} "
+        "must be positive.",
     )
     parser.add_argument(
-        'outfile', help="the excel file to store the result")
+        "-o",
+        "--open",
+        action="store_true",
+        default=False,
+        help="open the excel file when finished",
+    )
+    parser.add_argument(
+        "--overwrite",
+        help="overwrite the `toexcel` if exists",
+        action="store_true",
+        default=False,
+    )
+    parser.add_argument(
+        "--openzbd",
+        action="store_true",
+        default=False,
+        help="open the 中保登组合类产品登记网页: " f"{zbdurl} ",
+    )
+    parser.add_argument("outfile", help="the excel file to store the result")
     opt = parser.parse_args()
 
     if opt.openzbd:
@@ -90,7 +104,8 @@ def main() -> None:
         raise ValueError("`pages` param is not provided")
     if total_page < 1:
         raise ValueError(
-            f"`pages` parameter must be positive integer (now is {total_page})!")
+            f"`pages` parameter must be positive integer (now is {total_page})!"
+        )
 
     out: list[pd.DataFrame] = []
     for i in range(1, total_page):
@@ -99,8 +114,9 @@ def main() -> None:
         if r is not None:
             out.append(r)
     tbl: pd.DataFrame = pd.concat(out, ignore_index=True)
-    writexlsx.write({"组合类产品": tbl}, outfile,
-                    open=opt.open, overwrite=opt.overwrite)
+    writexlsx.write(
+        {"组合类产品": tbl}, outfile, open=opt.open, overwrite=opt.overwrite
+    )
     print(f"the result has been saved to excel: {outfile}")
 
 

@@ -19,5 +19,7 @@ def test_find_nav():
 
     # report correct error msg
     indexes2 = ["ABC", "当天单位净值：", "累计单位净值：", "ZZZ"]
-    with pytest.raises(LookupError, match=re.escape(r"['当天单位净值：', '累计单位净值：']")):
+    with pytest.raises(
+        LookupError, match=re.escape(r"['当天单位净值：', '累计单位净值：']")
+    ):
         rd.find_nav(indexes2, values, nms)

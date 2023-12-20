@@ -36,11 +36,12 @@ class Nav:
     nav_acc: float
 
 
-def find_nav(indexes: list[str], values: list[str],
-             nms: tuple[str, str]) -> tuple[float, float]:
+def find_nav(
+    indexes: list[str], values: list[str], nms: tuple[str, str]
+) -> tuple[float, float]:
     nav = None
     nav_acc = None
-    for (index, value) in zip(indexes, values):
+    for index, value in zip(indexes, values):
         if re.search(nms[0], index) is not None:
             nav = float(value)
         if re.search(nms[1], index) is not None:
@@ -49,7 +50,8 @@ def find_nav(indexes: list[str], values: list[str],
             return (nav, nav_acc)
     nms_cand = list(filter(lambda x: re.search("净值", x) is not None, indexes))
     raise LookupError(
-        f"Can't find {nms} in the first column, possible names {nms_cand}")
+        f"Can't find {nms} in the first column, possible names {nms_cand}"
+    )
 
 
 def parse_date(x: str) -> Optional[date]:
@@ -61,8 +63,12 @@ def parse_date(x: str) -> Optional[date]:
         return None
 
 
-def read_nav(excel: pathlib.Path, date_rgs: tuple[int, int],
-             nav_nms: tuple[str, str], sheet: str | int = 0) -> Nav:
+def read_nav(
+    excel: pathlib.Path,
+    date_rgs: tuple[int, int],
+    nav_nms: tuple[str, str],
+    sheet: str | int = 0,
+) -> Nav:
     """Read Nav data from Excel (估值表)
 
     Args:
@@ -118,10 +124,14 @@ def find_all_excels(x: str) -> list[pathlib.Path]:
     return out
 
 
-def read_navs(excels: list[pathlib.Path], date_rgs: tuple[int, int],
-              nav_nms: tuple[str, str], sheet: str | int = 0) -> pd.DataFrame:
+def read_navs(
+    excels: list[pathlib.Path],
+    date_rgs: tuple[int, int],
+    nav_nms: tuple[str, str],
+    sheet: str | int = 0,
+) -> pd.DataFrame:
     out = []
-    for (i, excel) in enumerate(excels):
+    for i, excel in enumerate(excels):
         logging.info(f"Parsing {i+1} of {len(excels)}, {excel.name}...")
         nav = read_nav(excel, date_rgs=date_rgs, nav_nms=nav_nms, sheet=sheet)
         logging.debug(f"nav is {nav}")
@@ -135,35 +145,61 @@ def read_navs(excels: list[pathlib.Path], date_rgs: tuple[int, int],
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        'fromdir', type=str, help="the directory that stores the nav excels (估值表)")
+        "fromdir", type=str, help="the directory that stores the nav excels (估值表)"
+    )
     parser.add_argument(
-        'toexcel', type=str, help="the excel file that stores the parsed result")
+        "toexcel", type=str, help="the excel file that stores the parsed result"
+    )
     parser.add_argument(
-        '-date_rgs', type=str, default="(10,0)",
+        "-date_rgs",
+        type=str,
+        default="(10,0)",
         help="the possible date positions, must be in the form of (int, int), "
         "which means the program tries to find the reference date "
-        "among the range `0:date_rgs[0], date_rgs[1]` cells")
+        "among the range `0:date_rgs[0], date_rgs[1]` cells",
+    )
     parser.add_argument(
-        '-nav_nms', type=str, default="('(今日|基金)单位净值', '累计单位净值')",
+        "-nav_nms",
+        type=str,
+        default="('(今日|基金)单位净值', '累计单位净值')",
         help="the nav field names, require 2 names, must be in the format of (str, str), "
-        "which represents the unit nav and accumulative nav row names, respectively")
+        "which represents the unit nav and accumulative nav row names, respectively",
+    )
     parser.add_argument(
-        '-s', "--sheet", type=int, help="the sheet name of the nav table", default=0)
+        "-s", "--sheet", type=int, help="the sheet name of the nav table", default=0
+    )
     parser.add_argument(
-        '-n', type=int,
-        help="only parse the first n Excels (default 0, means all)", default=0)
+        "-n",
+        type=int,
+        help="only parse the first n Excels (default 0, means all)",
+        default=0,
+    )
     parser.add_argument(
-        "--overwrite", help="overwrite the `toexcel` if exists",
-        action="store_true", default=False)
+        "--overwrite",
+        help="overwrite the `toexcel` if exists",
+        action="store_true",
+        default=False,
+    )
     parser.add_argument(
-        "-o", help="open the output excel file when job is over",
-        action="store_true", default=False)
+        "-o",
+        help="open the output excel file when job is over",
+        action="store_true",
+        default=False,
+    )
     parser.add_argument(
-        '-v', "--verbose", help="display the info message",
-        action="store_true", default=False)
+        "-v",
+        "--verbose",
+        help="display the info message",
+        action="store_true",
+        default=False,
+    )
     parser.add_argument(
-        '-d', "--debug", help="display the debug message",
-        action="store_true", default=False)
+        "-d",
+        "--debug",
+        help="display the debug message",
+        action="store_true",
+        default=False,
+    )
 
     opt = parser.parse_args()
     toexcel = pathlib.Path(opt.toexcel).expanduser()
@@ -177,11 +213,12 @@ def main() -> None:
 
     excels = find_all_excels(opt.fromdir)
     if opt.n > 0:
-        excels = excels[:opt.n]
+        excels = excels[: opt.n]
     logging.debug(f"find excels: {list(map(lambda x: x.name, excels))}")
 
-    out = read_navs(excels, date_rgs=eval(opt.date_rgs),
-                    nav_nms=eval(opt.nav_nms), sheet=opt.sheet)
+    out = read_navs(
+        excels, date_rgs=eval(opt.date_rgs), nav_nms=eval(opt.nav_nms), sheet=opt.sheet
+    )
     out.to_excel(opt.toexcel)
 
     if opt.o:

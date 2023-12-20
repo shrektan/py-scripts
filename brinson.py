@@ -43,8 +43,7 @@ class Position:
     def __post_init__(self) -> None:
         # isclose() returns false for NA so no need to check NA
         if not isclose(self.sum_weight(), 1.0):
-            raise ValueError(
-                f"the sum weight is {self.sum_weight()} but should be 1.0")
+            raise ValueError(f"the sum weight is {self.sum_weight()} but should be 1.0")
         if isnan(self.real_rtn):
             self.real_rtn = self.sum_rtn()
 
@@ -73,17 +72,14 @@ def breakdown(ptf: Position, bmk: Position) -> Brinson_Res:
           In addition, all the cross effect will be added back to the
           "selection" effect.
     """
-    if (len(ptf) != len(bmk)):
+    if len(ptf) != len(bmk):
         raise ValueError(
-            f"the length of ptf ({len(ptf)}) and bmk ({len(bmk)}) must be equal")
+            f"the length of ptf ({len(ptf)}) and bmk ({len(bmk)}) must be equal"
+        )
     alloc: list[float] = []
     sel: list[float] = []
-    for (p, b) in zip(ptf, bmk):
-        alloc.append(
-            (p.weight - b.weight) * b.rtn
-        )
-        sel.append(
-            (p.rtn - b.rtn) * p.weight
-        )
+    for p, b in zip(ptf, bmk):
+        alloc.append((p.weight - b.weight) * b.rtn)
+        sel.append((p.rtn - b.rtn) * p.weight)
     other = (ptf.real_rtn - bmk.real_rtn) - (ptf.sum_rtn() - bmk.sum_rtn())
     return Brinson_Res(alloc, sel, other)

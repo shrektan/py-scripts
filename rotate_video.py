@@ -6,8 +6,9 @@ import pathlib
 import argparse
 
 
-def rotate(files: list[pathlib.Path], out_folder: pathlib.Path,
-           speed: str, transpose: int) -> None:
+def rotate(
+    files: list[pathlib.Path], out_folder: pathlib.Path, speed: str, transpose: int
+) -> None:
     """rotate the video files and generate them into out_folder
 
     Args:
@@ -34,15 +35,24 @@ def rotate(files: list[pathlib.Path], out_folder: pathlib.Path,
             raise FileNotFoundError(f"{file}")
     n = len(files)
     print(f"There're {n} files in total.")
-    for (i, file) in enumerate(files):
+    for i, file in enumerate(files):
         print(f"Rotating {i+1} of {n}...")
         out_file = out_folder / file.name
-        cmd: list[str] = ["ffmpeg", "-i", str(file),
-                          "-loglevel", "fatal", "-nostats",  # to be less verbose
-                          "-c:v", "libx264",
-                          "-preset", f"{speed}",
-                          "-vf", f"transpose={transpose}",
-                          str(out_file)]
+        cmd: list[str] = [
+            "ffmpeg",
+            "-i",
+            str(file),
+            "-loglevel",
+            "fatal",
+            "-nostats",  # to be less verbose
+            "-c:v",
+            "libx264",
+            "-preset",
+            f"{speed}",
+            "-vf",
+            f"transpose={transpose}",
+            str(out_file),
+        ]
         subprocess.run(cmd, check=True)
     print(f"All {n} files are done.")
 
@@ -54,6 +64,7 @@ def get_files(x: str) -> list[pathlib.Path]:
 
     def isfile_notdot(f: pathlib.Path) -> bool:
         return f.is_file() and f.name[0] != "."
+
     out = list(filter(isfile_notdot, folder.iterdir()))
     out.sort()
     return out
@@ -62,16 +73,26 @@ def get_files(x: str) -> list[pathlib.Path]:
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        '-t', '--transpose', type=int, default=2,
+        "-t",
+        "--transpose",
+        type=int,
+        default=2,
         help="1 is 90 clock-wise; 2 (default) is 90 counter clock-wise. "
-        "See more in https://ffmpeg.org/ffmpeg-filters.html#toc-transpose-1")
+        "See more in https://ffmpeg.org/ffmpeg-filters.html#toc-transpose-1",
+    )
     parser.add_argument(
-        '-s', '--speed', type=str, default="ultrafast",
-        help="Should be one of fast and ultrafast (default)")
+        "-s",
+        "--speed",
+        type=str,
+        default="ultrafast",
+        help="Should be one of fast and ultrafast (default)",
+    )
     parser.add_argument(
-        'ffolder', help="The folder contains the video files to be rotated")
+        "ffolder", help="The folder contains the video files to be rotated"
+    )
     parser.add_argument(
-        'tfolder', help="The folder where the rotated files to be generated into")
+        "tfolder", help="The folder where the rotated files to be generated into"
+    )
     options = parser.parse_args()
     files = [pathlib.Path(f) for f in get_files(options.ffolder)]
     out_folder = pathlib.Path(options.tfolder)
